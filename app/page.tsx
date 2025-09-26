@@ -396,8 +396,7 @@ export default function RoulettePage() {
                           <video 
                             ref={videoRef} 
                             src={cutinMedia} 
-                            autoPlay 
-                            muted 
+                            autoPlay  
                             playsInline // iOSでインライン再生するために追加
                             className="max-w-full max-h-full object-contain" 
                           />
