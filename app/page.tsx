@@ -63,17 +63,113 @@ export default function RoulettePage() {
   }
 
   const downloadTicket = () => {
-    if (!ticketRef.current || !winner) return
+    if (!winner || winner === "はずれ") return
 
-    // HTML to Canvas conversion for download
-    import("html2canvas").then((html2canvas) => {
-      html2canvas.default(ticketRef.current!).then((canvas) => {
-        const link = document.createElement("a")
-        link.download = `${winner}_ticket.png`
-        link.href = canvas.toDataURL()
-        link.click()
-      })
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    // Set canvas size
+    canvas.width = 400
+    canvas.height = 500
+
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
+    gradient.addColorStop(0, "#fbbf24") // yellow-400
+    gradient.addColorStop(1, "#f59e0b") // yellow-500
+
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Draw ticket background
+    ctx.fillStyle = "#ffffff"
+    ctx.roundRect(20, 20, canvas.width - 40, canvas.height - 40, 10)
+    ctx.fill()
+
+    // Draw border
+    ctx.strokeStyle = "#374151"
+    ctx.lineWidth = 4
+    ctx.roundRect(20, 20, canvas.width - 40, canvas.height - 40, 10)
+    ctx.stroke()
+
+    // Draw title
+    ctx.fillStyle = "#1f2937"
+    ctx.font = "bold 24px Arial"
+    ctx.textAlign = "center"
+    ctx.fillText("🎫 デジタル券", canvas.width / 2, 80)
+
+    // Draw prize name
+    ctx.font = "bold 32px Arial"
+    ctx.fillStyle = "#dc2626"
+    ctx.fillText(winner, canvas.width / 2, 140)
+
+    // Draw description
+    ctx.font = "16px Arial"
+    ctx.fillStyle = "#6b7280"
+    ctx.fillText("この券は有効な賞品券です", canvas.width / 2, 180)
+
+    // Draw dashed line
+    ctx.setLineDash([5, 5])
+    ctx.strokeStyle = "#d1d5db"
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(40, 200)
+    ctx.lineTo(canvas.width - 40, 200)
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // Draw details
+    const currentDate = new Date().toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     })
+    const ticketNumber = Math.random().toString(36).substr(2, 9).toUpperCase()
+
+    ctx.font = "14px Arial"
+    ctx.fillStyle = "#6b7280"
+    ctx.textAlign = "left"
+    ctx.fillText("発行日:", 50, 240)
+    ctx.textAlign = "right"
+    ctx.fillText(currentDate, canvas.width - 50, 240)
+
+    ctx.textAlign = "left"
+    ctx.fillText("券番号:", 50, 270)
+    ctx.textAlign = "right"
+    ctx.font = "14px monospace"
+    ctx.fillText(ticketNumber, canvas.width - 50, 270)
+
+    ctx.font = "14px Arial"
+    ctx.textAlign = "left"
+    ctx.fillText("発行者:", 50, 300)
+    ctx.textAlign = "right"
+    ctx.fillText("ルーレットアプリ", canvas.width - 50, 300)
+
+    // Draw bottom dashed line
+    ctx.setLineDash([5, 5])
+    ctx.strokeStyle = "#d1d5db"
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(40, 330)
+    ctx.lineTo(canvas.width - 40, 330)
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // Draw footer text
+    ctx.font = "12px Arial"
+    ctx.fillStyle = "#9ca3af"
+    ctx.textAlign = "center"
+    ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360)
+
+    // Draw celebration emoji
+    ctx.font = "32px Arial"
+    ctx.fillText("🎉", canvas.width / 2, 420)
+
+    // Download the image
+    const link = document.createElement("a")
+    link.download = `${winner}_ticket.png`
+    link.href = canvas.toDataURL("image/png")
+    link.click()
   }
 
   const resetGame = () => {
