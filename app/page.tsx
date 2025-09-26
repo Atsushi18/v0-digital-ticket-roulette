@@ -14,7 +14,7 @@ import localforage from "localforage"
 export default function RoulettePage() {
   const prizes = ["ごちそう券", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ"]
 
-  const [isSpinning, setIsSpinning] = useState(false)
+  const [rouletteState, setRouletteState] = useState<"idle" | "spinning" | "stopping">("idle")
   const [winner, setWinner] = useState<string | null>(null)
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null)
   const [showTicket, setShowTicket] = useState(false)
@@ -30,7 +30,6 @@ export default function RoulettePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const [showMediaUpload, setShowMediaUpload] = useState(false)
-  const [gameKey, setGameKey] = useState(0)
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -112,7 +111,7 @@ export default function RoulettePage() {
   }
   
   const spinRoulette = () => {
-    if (isSpinning || prizes.length === 0) return
+    if (rouletteState !== "idle") return
 
     setWinner(null)
     setWinnerIndex(null)
@@ -134,19 +133,26 @@ export default function RoulettePage() {
     }
     
     setWinnerIndex(targetIndex);
-    
-    setIsSpinning(true)
+    setRouletteState("spinning")
 
+    // 4秒間スピンさせた後、停止状態に移行
     setTimeout(() => {
-      const resultPrize = prizes[targetIndex];
-      setInitialResult(resultPrize);
-      setWinner(resultPrize);
-      setIsSpinning(false)
+      setRouletteState("stopping");
+    }, 4000);
+  }
+  
+  // ルーレットが完全に停止した後に呼ばれる関数
+  const onRouletteStop = () => {
+    if (winnerIndex === null) return;
+    
+    const resultPrize = prizes[winnerIndex];
+    setInitialResult(resultPrize);
+    setWinner(resultPrize);
 
-      setTimeout(() => {
-        setShowCutIn(true)
-      }, 2000)
-    }, 6000)
+    // 2秒後にカットイン
+    setTimeout(() => {
+      setShowCutIn(true)
+    }, 2000)
   }
 
   const handleCutinEnd = () => {
@@ -262,10 +268,9 @@ export default function RoulettePage() {
     setWinner(null)
     setWinnerIndex(null)
     setShowTicket(false)
-    setIsSpinning(false)
     setShowCutIn(false)
     setInitialResult(null)
-    setGameKey(prevKey => prevKey + 1)
+    setRouletteState("idle")
   }
 
   return (
@@ -278,11 +283,11 @@ export default function RoulettePage() {
               <p className="text-muted-foreground">ルーレットを回して素敵な賞品をゲットしよう！</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleSettingsClick} disabled={isSpinning}>
+              <Button variant="outline" size="sm" onClick={handleSettingsClick} disabled={rouletteState !== 'idle'}>
                 <Settings className="w-4 h-4 mr-2" />
                 設定
               </Button>
-              <Button variant="outline" size="sm" onClick={resetGame} disabled={isSpinning}>
+              <Button variant="outline" size="sm" onClick={resetGame} disabled={rouletteState !== 'idle'}>
                 <RotateCcw className="w-4 h-4 mr-2" />
                 リセット
               </Button>
@@ -371,7 +376,7 @@ export default function RoulettePage() {
           </Card>
         )}
         <div className="grid lg:grid-cols-1 gap-8">
-          <Card className="lg-col-span-1">
+          <Card className="lg:col-span-1">
             <CardContent className="p-8">
               <div className="flex flex-col items-center space-y-8">
                 
@@ -386,7 +391,6 @@ export default function RoulettePage() {
                             className="max-w-full max-h-full object-contain"
                           />
                         ) : (
-                          // --- ▼ここから修正▼ ---
                           <video 
                             ref={videoRef} 
                             src={cutinMedia} 
@@ -394,7 +398,6 @@ export default function RoulettePage() {
                             playsInline
                             className="max-w-full max-h-full object-contain" 
                           />
-                          // --- ▲ここまで修正▲ ---
                         )
                       ) : (
                         <div className="bg-gradient-to-r from-yellow-400 to-red-500 text-white text-6xl font-bold p-8 rounded-lg shadow-2xl animate-bounce">
@@ -421,10 +424,15 @@ export default function RoulettePage() {
                   </div>
                 ) : (
                   <>
-                    <RouletteWheel key={gameKey} prizes={prizes} isSpinning={isSpinning} winner={initialResult} winnerIndex={winnerIndex} />
+                    <RouletteWheel 
+                      prizes={prizes} 
+                      rouletteState={rouletteState} 
+                      winnerIndex={winnerIndex}
+                      onStop={onRouletteStop}
+                    />
                     <div className="text-center space-y-4">
-                      <Button onClick={spinRoulette} disabled={isSpinning || showCutIn} size="lg" className="px-8 py-4 text-lg font-semibold">
-                        {isSpinning ? "ルーレット回転中..." : showCutIn ? "カットイン中..." : "ルーレットを回す！"}
+                      <Button onClick={spinRoulette} disabled={rouletteState !== 'idle'} size="lg" className="px-8 py-4 text-lg font-semibold">
+                        {rouletteState === 'spinning' || rouletteState === 'stopping' ? "ルーレット回転中..." : "ルーレットを回す！"}
                       </Button>
                       {winner && !showCutIn && (
                         <div className="space-y-4">
