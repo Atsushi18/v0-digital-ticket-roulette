@@ -125,3 +125,14 @@
     @apply bg-background text-foreground;
   }
 }
+@keyframes upgrade-animation {
+  0% { transform: scale(1) rotate(0deg); opacity: 1; }
+  10%, 30%, 50%, 70%, 90% { transform: scale(1.05) rotate(-2deg); }
+  20%, 40%, 60%, 80% { transform: scale(1.05) rotate(2deg); }
+  95% { opacity: 1; transform: scale(1.05); }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.upgrade-animation {
+  animation: upgrade-animation 2s ease-in-out forwards;
+}

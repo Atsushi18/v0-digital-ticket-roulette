@@ -12,13 +12,15 @@ import { Download, RotateCcw, Settings, Upload, X } from "lucide-react"
 import localforage from "localforage"
 
 export default function RoulettePage() {
-  const prizes = ["ごちそう券", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ"]
+  const prizes = ["食い逃げ券", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ"]
 
   const [isSpinning, setIsSpinning] = useState(false)
   const [winner, setWinner] = useState<string | null>(null)
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null)
   const [showTicket, setShowTicket] = useState(false)
   const [showCutIn, setShowCutIn] = useState(false)
+  const [showHazureCard, setShowHazureCard] = useState(false) // ★はずれカード用の状態
+  const [isUpgrading, setIsUpgrading] = useState(false)
   const [initialResult, setInitialResult] = useState<string | null>(null)
   const [cutinMedia, setCutinMedia] = useState<string | null>(null)
   const [cutinMediaType, setCutinMediaType] = useState<"image" | "video" | null>(null)
@@ -29,7 +31,6 @@ export default function RoulettePage() {
   const ticketRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [gameKey, setGameKey] = useState(0)
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -115,18 +116,20 @@ export default function RoulettePage() {
     setWinner(null)
     setShowTicket(false)
     setShowCutIn(false)
+    setShowHazureCard(false)
     setInitialResult(null)
+    setIsUpgrading(false)
     
-    const atariIndex = prizes.findIndex(p => p === "ごちそう券");
+    const atariIndex = prizes.findIndex(p => p === "食い逃げ券");
     if (atariIndex === -1) {
-      alert("「ごちそう券」がありません！");
+      alert("「食い逃げ券」がありません！");
       return;
     }
     
     const targetIndex = (atariIndex + 1) % prizes.length;
 
     if (prizes[targetIndex] !== "はずれ") {
-      alert("「ごちそう券」の隣に「はずれ」がありません！惜しい演出ができません。");
+      alert("「食い逃げ券」の隣に「はずれ」がありません！惜しい演出ができません。");
       return;
     }
     
@@ -141,16 +144,31 @@ export default function RoulettePage() {
     setWinner(resultPrize);
     setIsSpinning(false)
 
+    // ★ルーレット停止後、はずれカードを表示
+    setShowHazureCard(true);
+
     setTimeout(() => {
       setShowCutIn(true)
-    }, 2000)
+    }, 1500) // 少し早めにカットイン
   }
 
   const handleCutinEnd = () => {
-    setWinner("食い逃げ券")
     setShowCutIn(false)
-    setTimeout(() => setShowTicket(true), 1000)
+    setIsUpgrading(true) // ★カットイン後に昇格アニメーションを開始
   }
+
+  // ★昇格アニメーションを管理するuseEffect
+  useEffect(() => {
+    if (isUpgrading) {
+      const timer = setTimeout(() => {
+        setIsUpgrading(false);
+        setShowHazureCard(false);
+        setWinner("食い逃げ券");
+        setShowTicket(true);
+      }, 2000); // 2秒間の昇格アニメーション
+      return () => clearTimeout(timer);
+    }
+  }, [isUpgrading]);
 
   useEffect(() => {
     if (showCutIn) {
@@ -162,12 +180,12 @@ export default function RoulettePage() {
         
         videoElement.play().catch(error => {
           console.error("動画の自動再生に失敗しました:", error)
-          setTimeout(() => handleCutinEnd(), 4000)
+          setTimeout(() => handleCutinEnd(), 2000) // フォールバックも2秒に
         })
         
         return () => videoElement.removeEventListener("ended", onVideoEnd)
       } else {
-        const timer = setTimeout(() => handleCutinEnd(), 4000)
+        const timer = setTimeout(() => handleCutinEnd(), 2000) // 画像のカットインも2秒に
         return () => clearTimeout(timer)
       }
     }
@@ -246,7 +264,7 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af"
     ctx.textAlign = "center"
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360)
-    ctx.fillText("※ 原井川陸に食事代金を肩代わりさせることができます", canvas.width / 2, 380)
+    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380)
     ctx.font = "32px Arial"
     ctx.fillText("🎉", canvas.width / 2, 420)
     const link = document.createElement("a")
@@ -262,6 +280,8 @@ export default function RoulettePage() {
     setInitialResult(null)
     setIsSpinning(false)
     setWinnerIndex(null)
+    setShowHazureCard(false)
+    setIsUpgrading(false)
   }
 
   return (
@@ -399,6 +419,18 @@ export default function RoulettePage() {
                     </div>
                   </div>
                 )}
+                
+                {showHazureCard && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+                    <Card className={`w-96 ${isUpgrading ? 'upgrade-animation' : ''}`}>
+                       <CardContent className="p-8 text-center space-y-4">
+                         <h2 className="text-4xl font-bold text-destructive mb-2">😢 残念！</h2>
+                         <p className="text-2xl text-foreground">はずれでした...</p>
+                       </CardContent>
+                    </Card>
+                  </div>
+                )}
+
 
                 {winner && !showCutIn && showTicket && winner !== "はずれ" ? (
                   <div className="w-full max-w-md flex flex-col items-center space-y-4">
@@ -426,18 +458,6 @@ export default function RoulettePage() {
                       <Button onClick={spinRoulette} disabled={isSpinning} size="lg" className="px-8 py-4 text-lg font-semibold">
                         {isSpinning ? "ルーレット回転中..." : "ルーレットを回す！"}
                       </Button>
-                      {winner && !showCutIn && (
-                        <div className="space-y-4">
-                          <div className="text-center">
-                            <h2 className="text-3xl font-bold text-primary mb-2">
-                              {winner === "はずれ" ? "😢 残念！" : ""}
-                            </h2>
-                            <p className="text-xl text-foreground">
-                              {winner === "はずれ" ? "はずれでした..." : ""}
-                            </p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </>
                 )}
@@ -446,8 +466,8 @@ export default function RoulettePage() {
                   <h3 className="text-lg font-semibold mb-4 text-center">賞品一覧</h3>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {Array.from(new Set(prizes)).map((prize, index) => (
-                      <Badge key={index} variant={prize === "ごちそう券" ? "default" : "secondary"}>
-                        {prize} {prize === "ごちそう券" ? "(1個)" : `(${prizes.filter((p) => p === prize).length}個)`}
+                      <Badge key={index} variant={prize === "食い逃げ券" ? "default" : "secondary"}>
+                        {prize} {prize === "食い逃げ券" ? "(1個)" : `(${prizes.filter((p) => p === prize).length}個)`}
                       </Badge>
                     ))}
                   </div>

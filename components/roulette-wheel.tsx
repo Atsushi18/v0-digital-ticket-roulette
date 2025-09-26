@@ -119,3 +119,4 @@ export function RouletteWheel({ prizes, isSpinning, winnerIndex, onStop }: Roule
     </div>
   )
 }
+
