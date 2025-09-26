@@ -29,7 +29,6 @@ export default function RoulettePage() {
   const ticketRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [showMediaUpload, setShowMediaUpload] = useState(false)
   const [gameKey, setGameKey] = useState(0)
 
   useEffect(() => {
@@ -86,7 +85,6 @@ export default function RoulettePage() {
       const result = e.target?.result as string
       setCutinMedia(result)
       setCutinMediaType(mediaType)
-      setShowMediaUpload(false)
 
       try {
         await localforage.setItem("cutinMedia", result)
@@ -112,10 +110,9 @@ export default function RoulettePage() {
   }
   
   const spinRoulette = () => {
-    if (isSpinning || prizes.length === 0) return
+    if (isSpinning) return
 
     setWinner(null)
-    setWinnerIndex(null)
     setShowTicket(false)
     setShowCutIn(false)
     setInitialResult(null)
@@ -134,19 +131,19 @@ export default function RoulettePage() {
     }
     
     setWinnerIndex(targetIndex);
-    
     setIsSpinning(true)
+  }
+
+  const handleRouletteStop = () => {
+    if (winnerIndex === null) return;
+    const resultPrize = prizes[winnerIndex];
+    setInitialResult(resultPrize);
+    setWinner(resultPrize);
+    setIsSpinning(false)
 
     setTimeout(() => {
-      const resultPrize = prizes[targetIndex];
-      setInitialResult(resultPrize);
-      setWinner(resultPrize);
-      setIsSpinning(false)
-
-      setTimeout(() => {
-        setShowCutIn(true)
-      }, 2000)
-    }, 6000)
+      setShowCutIn(true)
+    }, 2000)
   }
 
   const handleCutinEnd = () => {
@@ -155,32 +152,26 @@ export default function RoulettePage() {
     setTimeout(() => setShowTicket(true), 1000)
   }
 
-  // --- ▼ここから修正▼ ---
   useEffect(() => {
     if (showCutIn) {
       if (cutinMediaType === "video" && videoRef.current) {
         const videoElement = videoRef.current
         
-        // 再生終了したら次の処理へ
         const onVideoEnd = () => handleCutinEnd()
         videoElement.addEventListener("ended", onVideoEnd, { once: true })
         
-        // 動画の再生を試みる
         videoElement.play().catch(error => {
           console.error("動画の自動再生に失敗しました:", error)
-          // もし再生に失敗したら、4秒後に強制的に次の処理へ進む
           setTimeout(() => handleCutinEnd(), 4000)
         })
         
         return () => videoElement.removeEventListener("ended", onVideoEnd)
       } else {
-        // 画像またはデフォルトの場合はタイマーで処理
         const timer = setTimeout(() => handleCutinEnd(), 4000)
         return () => clearTimeout(timer)
       }
     }
   }, [showCutIn, cutinMediaType])
-  // --- ▲ここまで修正▲ ---
 
   const downloadTicket = () => {
     if (!winner || winner === "はずれ") return
@@ -266,12 +257,11 @@ export default function RoulettePage() {
 
   const resetGame = () => {
     setWinner(null)
-    setWinnerIndex(null)
     setShowTicket(false)
-    setIsSpinning(false)
     setShowCutIn(false)
     setInitialResult(null)
-    setGameKey(prevKey => prevKey + 1)
+    setIsSpinning(false)
+    setWinnerIndex(null)
   }
 
   return (
@@ -377,7 +367,7 @@ export default function RoulettePage() {
           </Card>
         )}
         <div className="grid lg:grid-cols-1 gap-8">
-          <Card className="lg-col-span-1">
+          <Card className="lg:col-span-1">
             <CardContent className="p-8">
               <div className="flex flex-col items-center space-y-8">
                 
@@ -392,16 +382,14 @@ export default function RoulettePage() {
                             className="max-w-full max-h-full object-contain"
                           />
                         ) : (
-                          // --- ▼ここから修正▼ ---
                           <video 
                             ref={videoRef} 
                             src={cutinMedia} 
                             autoPlay 
-                            muted 
-                            playsInline // iOSでインライン再生するために追加
+                            muted
+                            playsInline
                             className="max-w-full max-h-full object-contain" 
                           />
-                          // --- ▲ここまで修正▲ ---
                         )
                       ) : (
                         <div className="bg-gradient-to-r from-yellow-400 to-red-500 text-white text-6xl font-bold p-8 rounded-lg shadow-2xl animate-bounce">
@@ -428,19 +416,24 @@ export default function RoulettePage() {
                   </div>
                 ) : (
                   <>
-                    <RouletteWheel key={gameKey} prizes={prizes} isSpinning={isSpinning} winner={initialResult} winnerIndex={winnerIndex} />
+                    <RouletteWheel 
+                      prizes={prizes} 
+                      isSpinning={isSpinning} 
+                      winnerIndex={winnerIndex} 
+                      onStop={handleRouletteStop}
+                    />
                     <div className="text-center space-y-4">
-                      <Button onClick={spinRoulette} disabled={isSpinning || showCutIn} size="lg" className="px-8 py-4 text-lg font-semibold">
-                        {isSpinning ? "ルーレット回転中..." : showCutIn ? "カットイン中..." : "ルーレットを回す！"}
+                      <Button onClick={spinRoulette} disabled={isSpinning} size="lg" className="px-8 py-4 text-lg font-semibold">
+                        {isSpinning ? "ルーレット回転中..." : "ルーレットを回す！"}
                       </Button>
                       {winner && !showCutIn && (
                         <div className="space-y-4">
                           <div className="text-center">
                             <h2 className="text-3xl font-bold text-primary mb-2">
-                              {winner === "はずれ" ? "😢 残念！" : "🎉 おめでとう！"}
+                              {winner === "はずれ" ? "😢 残念！" : ""}
                             </h2>
                             <p className="text-xl text-foreground">
-                              {winner === "はずれ" ? "はずれでした..." : `${winner}が当たりました！`}
+                              {winner === "はずれ" ? "はずれでした..." : ""}
                             </p>
                           </div>
                         </div>
