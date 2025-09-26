@@ -155,32 +155,26 @@ export default function RoulettePage() {
     setTimeout(() => setShowTicket(true), 1000)
   }
 
-  // --- ▼ここから修正▼ ---
   useEffect(() => {
     if (showCutIn) {
       if (cutinMediaType === "video" && videoRef.current) {
         const videoElement = videoRef.current
         
-        // 再生終了したら次の処理へ
         const onVideoEnd = () => handleCutinEnd()
         videoElement.addEventListener("ended", onVideoEnd, { once: true })
         
-        // 動画の再生を試みる
         videoElement.play().catch(error => {
           console.error("動画の自動再生に失敗しました:", error)
-          // もし再生に失敗したら、4秒後に強制的に次の処理へ進む
           setTimeout(() => handleCutinEnd(), 4000)
         })
         
         return () => videoElement.removeEventListener("ended", onVideoEnd)
       } else {
-        // 画像またはデフォルトの場合はタイマーで処理
         const timer = setTimeout(() => handleCutinEnd(), 4000)
         return () => clearTimeout(timer)
       }
     }
   }, [showCutIn, cutinMediaType])
-  // --- ▲ここまで修正▲ ---
 
   const downloadTicket = () => {
     if (!winner || winner === "はずれ") return
@@ -396,8 +390,8 @@ export default function RoulettePage() {
                           <video 
                             ref={videoRef} 
                             src={cutinMedia} 
-                            autoPlay  
-                            playsInline // iOSでインライン再生するために追加
+                            autoPlay 
+                            playsInline
                             className="max-w-full max-h-full object-contain" 
                           />
                           // --- ▲ここまで修正▲ ---
