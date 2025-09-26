@@ -386,7 +386,6 @@ export default function RoulettePage() {
                             ref={videoRef} 
                             src={cutinMedia} 
                             autoPlay
-                            muted
                             playsInline
                             className="max-w-full max-h-full object-contain" 
                           />
