@@ -1,46 +1,34 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 
 interface RouletteWheelProps {
   prizes: string[]
-  rouletteState: "idle" | "spinning" | "stopping"
+  isSpinning: boolean
+  winner: string | null
   winnerIndex: number | null
-  onStop: () => void
 }
 
-export function RouletteWheel({ prizes, rouletteState, winnerIndex, onStop }: RouletteWheelProps) {
+export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: RouletteWheelProps) {
   const [rotation, setRotation] = useState(0)
   const segmentAngle = 360 / prizes.length
-  const wheelRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
-    if (rouletteState === "stopping" && winnerIndex !== null) {
-      // 停止する最終的な角度を計算
-      const startOfSegmentAngle = winnerIndex * segmentAngle;
-      const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
-      const targetAngle = startOfSegmentAngle + overshootOffset;
+    if (isSpinning && winnerIndex !== null) {
+      const timer = setTimeout(() => {
+        const startOfSegmentAngle = winnerIndex * segmentAngle;
+        const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
+        const targetAngle = startOfSegmentAngle + overshootOffset;
+        const spins = 10 + Math.random() * 5;
+        const finalRotation = (spins * 360) - targetAngle;
+  
+        setRotation(finalRotation);
+      }, 10);
       
-      // 現在の回転角度を取得
-      const wheel = wheelRef.current
-      if (!wheel) return
-      const currentTransform = window.getComputedStyle(wheel).transform
-      const matrix = new DOMMatrix(currentTransform)
-      const currentAngle = Math.round(Math.atan2(matrix.b, matrix.a) * (180 / Math.PI))
-      
-      // 現在の角度から最も近い未来の停止角度を計算
-      const fullRotations = Math.ceil(rotation / 360) + 2 // 少なくとも2周は余分に回す
-      const finalRotation = (fullRotations * 360) - targetAngle
-      
-      setRotation(finalRotation)
-      
-      // 停止アニメーションが終わったら親コンポーネントに通知
-      setTimeout(onStop, 2000) // 停止アニメーションの時間
-    } else if (rouletteState === "idle") {
-      setRotation(0) // アイドル状態に戻ったら角度をリセット
+      return () => clearTimeout(timer);
     }
-  }, [rouletteState])
+  }, [isSpinning, winnerIndex, segmentAngle]);
 
 
   const colors = [
@@ -57,17 +45,6 @@ export function RouletteWheel({ prizes, rouletteState, winnerIndex, onStop }: Ro
     "#85C1E9",
     "#F8C471",
   ]
-  
-  const getWheelClassName = () => {
-    if (rouletteState === 'spinning') {
-      return 'spinning'
-    }
-    if (rouletteState === 'stopping') {
-      // 停止アニメーション用のクラス
-      return 'transform transition-transform duration-[2000ms] ease-out'
-    }
-    return '' // idle
-  }
 
   return (
     <div className="relative">
@@ -80,14 +57,17 @@ export function RouletteWheel({ prizes, rouletteState, winnerIndex, onStop }: Ro
       </div>
 
       <div className="relative w-80 h-80 mx-auto">
+        {/* --- ▼ここから修正▼ --- */}
         <svg
-          ref={wheelRef}
           width="320"
           height="320"
           viewBox="0 0 320 320"
-          className={getWheelClassName()}
-          style={{ transform: rouletteState === 'spinning' ? undefined : `rotate(${rotation}deg)` }}
+          // will-changeを追加して、ブラウザにアニメーションすることを事前に伝える
+          className="transform transition-transform duration-[6000ms] ease-out [will-change:transform]"
+          // translateZ(0)を追加して、GPUアクセラレーションを有効にする（スマホでの動作が安定します）
+          style={{ transform: `rotate(${rotation}deg) translateZ(0)` }}
         >
+        {/* --- ▲ここまで修正▲ --- */}
           {prizes.map((prize, index) => {
             const startAngle = (index * segmentAngle - 90) * (Math.PI / 180)
             const endAngle = ((index + 1) * segmentAngle - 90) * (Math.PI / 180)
@@ -130,6 +110,14 @@ export function RouletteWheel({ prizes, rouletteState, winnerIndex, onStop }: Ro
           <circle cx="160" cy="160" r="20" fill="#333" stroke="#fff" strokeWidth="3" />
         </svg>
       </div>
+
+      {winner && !isSpinning && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-card border-2 border-primary rounded-lg p-4 shadow-lg animate-fade-in-up">
+            <p className="text-lg font-bold text-center text-primary">{winner}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
