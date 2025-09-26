@@ -39,6 +39,7 @@ export function PrizeTicket({ prizeName }: PrizeTicketProps) {
 
         <div className="border-t-2 border-dashed border-border pt-4 text-xs text-muted-foreground">
           <p>※ この券は当選の証明として使用できます</p>
+          <p>原井川陸に食事代金を肩代わりさせることができます</p>
           <div className="mt-2 text-2xl">🎉</div>
         </div>
       </div>

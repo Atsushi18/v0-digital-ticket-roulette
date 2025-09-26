@@ -147,7 +147,7 @@ export default function RoulettePage() {
   }
 
   const handleCutinEnd = () => {
-    setWinner("ごちそう券")
+    setWinner("食い逃げ券")
     setShowCutIn(false)
     setTimeout(() => setShowTicket(true), 1000)
   }
@@ -246,7 +246,7 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af"
     ctx.textAlign = "center"
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360)
-    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380)
+    ctx.fillText("※ 原井川陸に食事代金を肩代わりさせることができます", canvas.width / 2, 380)
     ctx.font = "32px Arial"
     ctx.fillText("🎉", canvas.width / 2, 420)
     const link = document.createElement("a")
