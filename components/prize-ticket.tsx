@@ -33,7 +33,7 @@ export function PrizeTicket({ prizeName }: PrizeTicketProps) {
           </div>
           <div className="flex justify-between">
             <span>発行者:</span>
-            <span>ルーレットアプリ</span>
+            <span>原井川陸</span>
           </div>
         </div>
 

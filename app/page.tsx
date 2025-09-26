@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { RouletteWheel } from "@/components/roulette-wheel"
 import { PrizeTicket } from "@/components/prize-ticket"
 import { Download, RotateCcw, Settings, Upload, X } from "lucide-react"
+import localforage from "localforage"
 
 export default function RoulettePage() {
   const prizes = ["ごちそう券", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ", "はずれ"]
 
   const [isSpinning, setIsSpinning] = useState(false)
   const [winner, setWinner] = useState<string | null>(null)
+  const [winnerIndex, setWinnerIndex] = useState<number | null>(null)
   const [showTicket, setShowTicket] = useState(false)
   const [showCutIn, setShowCutIn] = useState(false)
   const [initialResult, setInitialResult] = useState<string | null>(null)
@@ -25,12 +26,26 @@ export default function RoulettePage() {
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [ticketRef, setTicketRef] = useState<HTMLDivElement | null>(null)
+  const ticketRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const [showMediaUpload, setShowMediaUpload] = useState(false)
 
+  useEffect(() => {
+    const loadMedia = async () => {
+      const savedMedia = await localforage.getItem<string>("cutinMedia")
+      const savedMediaType = (await localforage.getItem<"image" | "video" | null>("cutinMediaType"))
+      
+      if (savedMedia && savedMediaType) {
+        setCutinMedia(savedMedia)
+        setCutinMediaType(savedMediaType)
+      }
+    }
+    loadMedia()
+  }, [])
+
   const handlePasswordSubmit = () => {
-    const correctPassword = "admin123" // 合言葉を設定
+    const correctPassword = "admin123"
     if (password === correctPassword) {
       setIsAuthenticated(true)
       setShowPasswordModal(false)
@@ -55,58 +70,100 @@ export default function RoulettePage() {
     if (!file) return
 
     const fileType = file.type
+    let mediaType: "image" | "video" | null = null
     if (fileType.startsWith("image/")) {
-      setCutinMediaType("image")
+      mediaType = "image"
     } else if (fileType.startsWith("video/")) {
-      setCutinMediaType("video")
+      mediaType = "video"
     } else {
       alert("画像または動画ファイルを選択してください")
       return
     }
 
     const reader = new FileReader()
-    reader.onload = (e) => {
-      setCutinMedia(e.target?.result as string)
+    reader.onload = async (e) => {
+      const result = e.target?.result as string
+      setCutinMedia(result)
+      setCutinMediaType(mediaType)
       setShowMediaUpload(false)
+
+      try {
+        await localforage.setItem("cutinMedia", result)
+        if (mediaType) {
+          await localforage.setItem("cutinMediaType", mediaType)
+        }
+      } catch (err) {
+        console.error("保存に失敗しました:", err)
+        alert("メディアの保存に失敗しました。ファイルサイズが大きすぎる可能性があります。")
+      }
     }
     reader.readAsDataURL(file)
   }
 
-  const removeCutinMedia = () => {
+  const removeCutinMedia = async () => {
     setCutinMedia(null)
     setCutinMediaType(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+    await localforage.removeItem("cutinMedia")
+    await localforage.removeItem("cutinMediaType")
   }
-
+  
   const spinRoulette = () => {
     if (isSpinning || prizes.length === 0) return
 
-    setIsSpinning(true)
     setWinner(null)
+    setWinnerIndex(null)
     setShowTicket(false)
     setShowCutIn(false)
     setInitialResult(null)
+    
+    const hazureIndices = prizes
+      .map((prize, index) => (prize === "はずれ" ? index : -1))
+      .filter(index => index !== -1);
+
+    if(hazureIndices.length === 0) {
+        alert("「はずれ」の選択肢がありません！");
+        return;
+    }
+    
+    const targetIndex = hazureIndices[Math.floor(Math.random() * hazureIndices.length)];
+    setWinnerIndex(targetIndex);
+    
+    setIsSpinning(true)
 
     setTimeout(() => {
-      setInitialResult("はずれ")
-      setWinner("はずれ")
+      const resultPrize = prizes[targetIndex];
+      setInitialResult(resultPrize);
+      setWinner(resultPrize);
       setIsSpinning(false)
 
       setTimeout(() => {
         setShowCutIn(true)
-
-        setTimeout(() => {
-          setWinner("ごちそう券")
-          setShowCutIn(false)
-
-          // Show ticket after winning
-          setTimeout(() => setShowTicket(true), 1000)
-        }, 2000)
       }, 2000)
     }, 3000)
   }
+
+  const handleCutinEnd = () => {
+    setWinner("ごちそう券")
+    setShowCutIn(false)
+    setTimeout(() => setShowTicket(true), 1000)
+  }
+
+  useEffect(() => {
+    if (showCutIn) {
+      if (cutinMediaType === "video" && videoRef.current) {
+        const videoElement = videoRef.current
+        const onVideoEnd = () => handleCutinEnd()
+        videoElement.addEventListener("ended", onVideoEnd, { once: true })
+        return () => videoElement.removeEventListener("ended", onVideoEnd)
+      } else {
+        const timer = setTimeout(() => handleCutinEnd(), 4000)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [showCutIn, cutinMediaType])
 
   const downloadTicket = () => {
     if (!winner || winner === "はずれ") return
@@ -115,46 +172,30 @@ export default function RoulettePage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Set canvas size
     canvas.width = 400
     canvas.height = 500
-
-    // Create gradient background
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, "#fbbf24") // yellow-400
-    gradient.addColorStop(1, "#f59e0b") // yellow-500
-
+    gradient.addColorStop(0, "#fbbf24")
+    gradient.addColorStop(1, "#f59e0b")
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Draw ticket background
     ctx.fillStyle = "#ffffff"
     ctx.roundRect(20, 20, canvas.width - 40, canvas.height - 40, 10)
     ctx.fill()
-
-    // Draw border
     ctx.strokeStyle = "#374151"
     ctx.lineWidth = 4
     ctx.roundRect(20, 20, canvas.width - 40, canvas.height - 40, 10)
     ctx.stroke()
-
-    // Draw title
     ctx.fillStyle = "#1f2937"
     ctx.font = "bold 24px Arial"
     ctx.textAlign = "center"
     ctx.fillText("🎫 デジタル券", canvas.width / 2, 80)
-
-    // Draw prize name
     ctx.font = "bold 32px Arial"
     ctx.fillStyle = "#dc2626"
     ctx.fillText(winner, canvas.width / 2, 140)
-
-    // Draw description
     ctx.font = "16px Arial"
     ctx.fillStyle = "#6b7280"
     ctx.fillText("この券は有効な賞品券です", canvas.width / 2, 180)
-
-    // Draw dashed line
     ctx.setLineDash([5, 5])
     ctx.strokeStyle = "#d1d5db"
     ctx.lineWidth = 2
@@ -163,35 +204,28 @@ export default function RoulettePage() {
     ctx.lineTo(canvas.width - 40, 200)
     ctx.stroke()
     ctx.setLineDash([])
-
-    // Draw details
     const currentDate = new Date().toLocaleDateString("ja-JP", {
       year: "numeric",
       month: "long",
       day: "numeric",
     })
     const ticketNumber = Math.random().toString(36).substr(2, 9).toUpperCase()
-
     ctx.font = "14px Arial"
     ctx.fillStyle = "#6b7280"
     ctx.textAlign = "left"
     ctx.fillText("発行日:", 50, 240)
     ctx.textAlign = "right"
     ctx.fillText(currentDate, canvas.width - 50, 240)
-
     ctx.textAlign = "left"
     ctx.fillText("券番号:", 50, 270)
     ctx.textAlign = "right"
     ctx.font = "14px monospace"
     ctx.fillText(ticketNumber, canvas.width - 50, 270)
-
     ctx.font = "14px Arial"
     ctx.textAlign = "left"
     ctx.fillText("発行者:", 50, 300)
     ctx.textAlign = "right"
-    ctx.fillText("ルーレットアプリ", canvas.width - 50, 300)
-
-    // Draw bottom dashed line
+    ctx.fillText("吉田プレゼント", canvas.width - 50, 300)
     ctx.setLineDash([5, 5])
     ctx.strokeStyle = "#d1d5db"
     ctx.lineWidth = 2
@@ -200,18 +234,12 @@ export default function RoulettePage() {
     ctx.lineTo(canvas.width - 40, 330)
     ctx.stroke()
     ctx.setLineDash([])
-
-    // Draw footer text
     ctx.font = "12px Arial"
     ctx.fillStyle = "#9ca3af"
     ctx.textAlign = "center"
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360)
-
-    // Draw celebration emoji
     ctx.font = "32px Arial"
     ctx.fillText("🎉", canvas.width / 2, 420)
-
-    // Download the image
     const link = document.createElement("a")
     link.download = `${winner}_ticket.png`
     link.href = canvas.toDataURL("image/png")
@@ -220,6 +248,7 @@ export default function RoulettePage() {
 
   const resetGame = () => {
     setWinner(null)
+    setWinnerIndex(null)
     setShowTicket(false)
     setIsSpinning(false)
     setShowCutIn(false)
@@ -228,7 +257,6 @@ export default function RoulettePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -249,7 +277,6 @@ export default function RoulettePage() {
           </div>
         </div>
       </header>
-
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <Card className="w-96">
@@ -264,9 +291,7 @@ export default function RoulettePage() {
                   onKeyPress={(e) => e.key === "Enter" && handlePasswordSubmit()}
                 />
                 <div className="flex gap-2">
-                  <Button onClick={handlePasswordSubmit} className="flex-1">
-                    認証
-                  </Button>
+                  <Button onClick={handlePasswordSubmit} className="flex-1">認証</Button>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -283,7 +308,6 @@ export default function RoulettePage() {
           </Card>
         </div>
       )}
-
       <div className="container mx-auto px-4 py-8">
         {showSettings && isAuthenticated && (
           <Card className="mb-6">
@@ -303,7 +327,6 @@ export default function RoulettePage() {
                     画像または動画をアップロード
                   </Button>
                 </div>
-
                 {cutinMedia && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -327,7 +350,6 @@ export default function RoulettePage() {
                     </div>
                   </div>
                 )}
-
                 <p className="text-sm text-muted-foreground">
                   ※ アップロードした画像や動画がカットイン演出で表示されます
                 </p>
@@ -335,13 +357,12 @@ export default function RoulettePage() {
             </CardContent>
           </Card>
         )}
-
         <div className="grid lg:grid-cols-1 gap-8">
-          {/* Roulette Section */}
           <Card className="lg:col-span-1">
             <CardContent className="p-8">
               <div className="flex flex-col items-center space-y-8">
-                <RouletteWheel prizes={prizes} isSpinning={isSpinning} winner={winner} />
+                
+                {/* --- ▼ここから修正▼ --- */}
 
                 {showCutIn && (
                   <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
@@ -351,10 +372,10 @@ export default function RoulettePage() {
                           <img
                             src={cutinMedia || "/placeholder.svg"}
                             alt="カットイン演出"
-                            className="max-w-full max-h-full object-contain animate-pulse"
+                            className="max-w-full max-h-full object-contain"
                           />
                         ) : (
-                          <video src={cutinMedia} autoPlay muted className="max-w-full max-h-full object-contain" />
+                          <video ref={videoRef} src={cutinMedia} autoPlay muted className="max-w-full max-h-full object-contain" />
                         )
                       ) : (
                         <div className="bg-gradient-to-r from-yellow-400 to-red-500 text-white text-6xl font-bold p-8 rounded-lg shadow-2xl animate-bounce">
@@ -365,41 +386,46 @@ export default function RoulettePage() {
                   </div>
                 )}
 
-                <div className="text-center space-y-4">
-                  <Button
-                    onClick={spinRoulette}
-                    disabled={isSpinning || showCutIn}
-                    size="lg"
-                    className="px-8 py-4 text-lg font-semibold"
-                  >
-                    {isSpinning ? "ルーレット回転中..." : showCutIn ? "カットイン中..." : "ルーレットを回す！"}
-                  </Button>
-
-                  {winner && !showCutIn && (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <h2 className="text-3xl font-bold text-primary mb-2">
-                          {winner === "はずれ" ? "😢 残念！" : "🎉 おめでとう！"}
-                        </h2>
-                        <p className="text-xl text-foreground">
-                          {winner === "はずれ" ? "はずれでした..." : `${winner}が当たりました！`}
-                        </p>
-                      </div>
-
-                      {winner !== "はずれ" && showTicket && (
+                {winner && !showCutIn && showTicket && winner !== "はずれ" ? (
+                  // 【当選後】チケット表示
+                  <div className="w-full max-w-md flex flex-col items-center space-y-4">
+                    <div className="text-center">
+                      <h2 className="text-3xl font-bold text-primary mb-2">🎉 おめでとう！</h2>
+                      <p className="text-xl text-foreground">{winner}が当たりました！</p>
+                    </div>
+                    <div ref={ticketRef}>
+                      <PrizeTicket prizeName={winner} />
+                    </div>
+                    <Button onClick={downloadTicket} className="w-full">
+                      <Download className="w-4 h-4 mr-2" />
+                      デジタル券をダウンロード
+                    </Button>
+                  </div>
+                ) : (
+                  // 【通常時】ルーレット表示
+                  <>
+                    <RouletteWheel prizes={prizes} isSpinning={isSpinning} winner={initialResult} winnerIndex={winnerIndex} />
+                    <div className="text-center space-y-4">
+                      <Button onClick={spinRoulette} disabled={isSpinning || showCutIn} size="lg" className="px-8 py-4 text-lg font-semibold">
+                        {isSpinning ? "ルーレット回転中..." : showCutIn ? "カットイン中..." : "ルーレットを回す！"}
+                      </Button>
+                      {winner && !showCutIn && (
                         <div className="space-y-4">
-                          <div ref={ticketRef}>
-                            <PrizeTicket prizeName={winner} />
+                          <div className="text-center">
+                            <h2 className="text-3xl font-bold text-primary mb-2">
+                              {winner === "はずれ" ? "😢 残念！" : "🎉 おめでとう！"}
+                            </h2>
+                            <p className="text-xl text-foreground">
+                              {winner === "はずれ" ? "はずれでした..." : `${winner}が当たりました！`}
+                            </p>
                           </div>
-                          <Button onClick={downloadTicket} className="w-full">
-                            <Download className="w-4 h-4 mr-2" />
-                            デジタル券をダウンロード
-                          </Button>
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
+                
+                {/* --- ▲ここまで修正▲ --- */}
 
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold mb-4 text-center">賞品一覧</h3>
