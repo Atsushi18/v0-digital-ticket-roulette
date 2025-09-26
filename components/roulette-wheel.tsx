@@ -1,41 +1,74 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 interface RouletteWheelProps {
   prizes: string[]
   isSpinning: boolean
   winnerIndex: number | null
+  onStop: () => void
 }
 
-export function RouletteWheel({ prizes, isSpinning, winnerIndex }: RouletteWheelProps) {
+export function RouletteWheel({ prizes, isSpinning, winnerIndex, onStop }: RouletteWheelProps) {
   const [rotation, setRotation] = useState(0)
-  const [transitionDuration, setTransitionDuration] = useState('0s') // アニメーション時間を管理
+  const [isStopping, setIsStopping] = useState(false)
   const segmentAngle = 360 / prizes.length
+  const wheelRef = useRef<SVGSVGElement>(null)
+  const currentRotation = useRef(0) // 現在の回転角度を保持
 
   useEffect(() => {
-    if (isSpinning && winnerIndex !== null) {
-      // 1. まずトランジションを無効にして、開始角度をリセット
-      setTransitionDuration('0s');
-      setRotation(prev => prev % 360);
+    const wheel = wheelRef.current
+    if (!wheel) return
 
-      // 2. ブラウザがリセットを認識するのを待ってから、本番のアニメーションを開始
-      const timer = setTimeout(() => {
-        setTransitionDuration('6s'); // アニメーション時間を設定
-        
-        const startOfSegmentAngle = winnerIndex * segmentAngle;
-        const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
-        const targetAngle = startOfSegmentAngle + overshootOffset;
-        const spins = 10 + Math.random() * 5;
-        const finalRotation = (spins * 360) - targetAngle;
-  
-        setRotation(finalRotation);
-      }, 50); // わずかな遅延が重要
-      
-      return () => clearTimeout(timer);
+    const handleTransitionEnd = () => {
+      if (isStopping) {
+        setIsStopping(false)
+        onStop()
+      }
     }
-  }, [isSpinning, winnerIndex, segmentAngle]);
+    
+    wheel.addEventListener('transitionend', handleTransitionEnd)
+    return () => wheel.removeEventListener('transitionend', handleTransitionEnd)
+  }, [isStopping, onStop])
+
+  useEffect(() => {
+    if (isSpinning) {
+      // 1. まずは高速で回転し続ける
+      const spinInterval = setInterval(() => {
+        currentRotation.current -= 20 // 回転速度
+        if (wheelRef.current) {
+          wheelRef.current.style.transition = 'none'
+          wheelRef.current.style.transform = `rotate(${currentRotation.current}deg)`
+        }
+      }, 16)
+
+      // 4秒後に停止処理を開始
+      const stopTimeout = setTimeout(() => {
+        clearInterval(spinInterval)
+        if (winnerIndex !== null) {
+          const startOfSegmentAngle = winnerIndex * segmentAngle;
+          const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
+          const targetAngle = startOfSegmentAngle + overshootOffset;
+          
+          const fullRotations = Math.floor(currentRotation.current / 360)
+          const finalRotation = (fullRotations * 360) - targetAngle
+          
+          setRotation(finalRotation)
+          setIsStopping(true)
+        }
+      }, 4000)
+
+      return () => {
+        clearInterval(spinInterval)
+        clearTimeout(stopTimeout)
+      }
+    } else {
+      // isSpinningがfalseになったらリセット
+      setRotation(0)
+      currentRotation.current = 0
+    }
+  }, [isSpinning, winnerIndex, segmentAngle])
 
 
   const colors = [
@@ -55,13 +88,14 @@ export function RouletteWheel({ prizes, isSpinning, winnerIndex }: RouletteWheel
 
       <div className="relative w-80 h-80 mx-auto">
         <svg
+          ref={wheelRef}
           width="320"
           height="320"
           viewBox="0 0 320 320"
           className="transform"
           style={{ 
             transform: `rotate(${rotation}deg)`,
-            transition: `transform ${transitionDuration} cubic-bezier(0.25, 0.46, 0.45, 0.94)`
+            transition: isStopping ? 'transform 2s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none',
           }}
         >
           {prizes.map((prize, index) => {

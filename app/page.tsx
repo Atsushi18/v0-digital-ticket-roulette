@@ -131,18 +131,20 @@ export default function RoulettePage() {
     
     setWinnerIndex(targetIndex);
     setIsSpinning(true)
+  }
+
+  const handleRouletteStop = () => {
+    if (winnerIndex === null) return;
+    const resultPrize = prizes[winnerIndex];
+    setInitialResult(resultPrize);
+    setWinner(resultPrize);
+    setIsSpinning(false)
 
     setTimeout(() => {
-      const resultPrize = prizes[targetIndex];
-      setInitialResult(resultPrize);
-      setWinner(resultPrize);
-      setIsSpinning(false)
-
-      setTimeout(() => {
-        setShowCutIn(true)
-      }, 2000)
-    }, 6000)
+      setShowCutIn(true)
+    }, 2000)
   }
+
 
   const handleCutinEnd = () => {
     setWinner("ごちそう券")
@@ -383,7 +385,8 @@ export default function RoulettePage() {
                           <video 
                             ref={videoRef} 
                             src={cutinMedia} 
-                            autoPlay 
+                            autoPlay
+                            muted
                             playsInline
                             className="max-w-full max-h-full object-contain" 
                           />
@@ -417,6 +420,7 @@ export default function RoulettePage() {
                       prizes={prizes} 
                       isSpinning={isSpinning} 
                       winnerIndex={winnerIndex} 
+                      onStop={handleRouletteStop}
                     />
                     <div className="text-center space-y-4">
                       <Button onClick={spinRoulette} disabled={isSpinning} size="lg" className="px-8 py-4 text-lg font-semibold">
