@@ -29,6 +29,7 @@ export default function RoulettePage() {
   const ticketRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [showMediaUpload, setShowMediaUpload] = useState(false)
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -84,6 +85,7 @@ export default function RoulettePage() {
       const result = e.target?.result as string
       setCutinMedia(result)
       setCutinMediaType(mediaType)
+      setShowMediaUpload(false)
 
       try {
         await localforage.setItem("cutinMedia", result)
@@ -109,9 +111,10 @@ export default function RoulettePage() {
   }
   
   const spinRoulette = () => {
-    if (isSpinning) return
+    if (isSpinning || prizes.length === 0) return
 
     setWinner(null)
+    setWinnerIndex(null)
     setShowTicket(false)
     setShowCutIn(false)
     setInitialResult(null)
@@ -122,29 +125,31 @@ export default function RoulettePage() {
       return;
     }
     
+    // --- ▼ここから修正▼ ---
+    // 常に「ごちそう券」の次のインデックスをターゲットにする
     const targetIndex = (atariIndex + 1) % prizes.length;
 
     if (prizes[targetIndex] !== "はずれ") {
       alert("「ごちそう券」の隣に「はずれ」がありません！惜しい演出ができません。");
       return;
     }
+    // --- ▲ここまで修正▲ ---
     
     setWinnerIndex(targetIndex);
+    
     setIsSpinning(true)
-  }
-
-  const handleRouletteStop = () => {
-    if (winnerIndex === null) return;
-    const resultPrize = prizes[winnerIndex];
-    setInitialResult(resultPrize);
-    setWinner(resultPrize);
-    setIsSpinning(false)
 
     setTimeout(() => {
-      setShowCutIn(true)
-    }, 2000)
-  }
+      const resultPrize = prizes[targetIndex];
+      setInitialResult(resultPrize);
+      setWinner(resultPrize);
+      setIsSpinning(false)
 
+      setTimeout(() => {
+        setShowCutIn(true)
+      }, 2000)
+    }, 6000)
+  }
 
   const handleCutinEnd = () => {
     setWinner("ごちそう券")
@@ -156,15 +161,8 @@ export default function RoulettePage() {
     if (showCutIn) {
       if (cutinMediaType === "video" && videoRef.current) {
         const videoElement = videoRef.current
-        
         const onVideoEnd = () => handleCutinEnd()
         videoElement.addEventListener("ended", onVideoEnd, { once: true })
-        
-        videoElement.play().catch(error => {
-          console.error("動画の自動再生に失敗しました:", error)
-          setTimeout(() => handleCutinEnd(), 4000)
-        })
-        
         return () => videoElement.removeEventListener("ended", onVideoEnd)
       } else {
         const timer = setTimeout(() => handleCutinEnd(), 4000)
@@ -246,7 +244,6 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af"
     ctx.textAlign = "center"
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360)
-    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380)
     ctx.font = "32px Arial"
     ctx.fillText("🎉", canvas.width / 2, 420)
     const link = document.createElement("a")
@@ -257,11 +254,11 @@ export default function RoulettePage() {
 
   const resetGame = () => {
     setWinner(null)
+    setWinnerIndex(null)
     setShowTicket(false)
+    setIsSpinning(false)
     setShowCutIn(false)
     setInitialResult(null)
-    setIsSpinning(false)
-    setWinnerIndex(null)
   }
 
   return (
@@ -382,14 +379,7 @@ export default function RoulettePage() {
                             className="max-w-full max-h-full object-contain"
                           />
                         ) : (
-                          <video 
-                            ref={videoRef} 
-                            src={cutinMedia} 
-                            autoPlay
-                            muted
-                            playsInline
-                            className="max-w-full max-h-full object-contain" 
-                          />
+                          <video ref={videoRef} src={cutinMedia} autoPlay muted className="max-w-full max-h-full object-contain" />
                         )
                       ) : (
                         <div className="bg-gradient-to-r from-yellow-400 to-red-500 text-white text-6xl font-bold p-8 rounded-lg shadow-2xl animate-bounce">
@@ -416,24 +406,19 @@ export default function RoulettePage() {
                   </div>
                 ) : (
                   <>
-                    <RouletteWheel 
-                      prizes={prizes} 
-                      isSpinning={isSpinning} 
-                      winnerIndex={winnerIndex} 
-                      onStop={handleRouletteStop}
-                    />
+                    <RouletteWheel prizes={prizes} isSpinning={isSpinning} winner={initialResult} winnerIndex={winnerIndex} />
                     <div className="text-center space-y-4">
-                      <Button onClick={spinRoulette} disabled={isSpinning} size="lg" className="px-8 py-4 text-lg font-semibold">
-                        {isSpinning ? "ルーレット回転中..." : "ルーレットを回す！"}
+                      <Button onClick={spinRoulette} disabled={isSpinning || showCutIn} size="lg" className="px-8 py-4 text-lg font-semibold">
+                        {isSpinning ? "ルーレット回転中..." : showCutIn ? "カットイン中..." : "ルーレットを回す！"}
                       </Button>
                       {winner && !showCutIn && (
                         <div className="space-y-4">
                           <div className="text-center">
                             <h2 className="text-3xl font-bold text-primary mb-2">
-                              {winner === "はずれ" ? "😢 残念！" : ""}
+                              {winner === "はずれ" ? "😢 残念！" : "🎉 おめでとう！"}
                             </h2>
                             <p className="text-xl text-foreground">
-                              {winner === "はずれ" ? "はずれでした..." : ""}
+                              {winner === "はずれ" ? "はずれでした..." : `${winner}が当たりました！`}
                             </p>
                           </div>
                         </div>

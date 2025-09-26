@@ -1,79 +1,57 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 
 interface RouletteWheelProps {
   prizes: string[]
   isSpinning: boolean
+  winner: string | null
   winnerIndex: number | null
-  onStop: () => void
 }
 
-export function RouletteWheel({ prizes, isSpinning, winnerIndex, onStop }: RouletteWheelProps) {
+export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: RouletteWheelProps) {
   const [rotation, setRotation] = useState(0)
-  const [isStopping, setIsStopping] = useState(false)
   const segmentAngle = 360 / prizes.length
-  const wheelRef = useRef<SVGSVGElement>(null)
-  const currentRotation = useRef(0) // 現在の回転角度を保持
 
   useEffect(() => {
-    const wheel = wheelRef.current
-    if (!wheel) return
+    if (isSpinning && winnerIndex !== null) {
+      // --- ▼ここから修正▼ ---
+      // 止まるべきセグメントの「開始」の角度を計算
+      const startOfSegmentAngle = winnerIndex * segmentAngle;
+      
+      // 停止位置を「ごちそう券」をギリギリ過ぎたあたりに設定
+      // セグメントの幅の10%〜20%くらいの位置
+      const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
+      
+      // 最終的な停止位置の目標角度
+      const targetAngle = startOfSegmentAngle + overshootOffset;
+      
+      // 回転数を設定（10〜15回転）
+      const spins = 10 + Math.random() * 5;
 
-    const handleTransitionEnd = () => {
-      if (isStopping) {
-        setIsStopping(false)
-        onStop()
-      }
+      // 最終的な停止角度を計算
+      const finalRotation = (spins * 360) - targetAngle;
+      // --- ▲ここまで修正▲ ---
+
+      setRotation(finalRotation);
     }
-    
-    wheel.addEventListener('transitionend', handleTransitionEnd)
-    return () => wheel.removeEventListener('transitionend', handleTransitionEnd)
-  }, [isStopping, onStop])
-
-  useEffect(() => {
-    if (isSpinning) {
-      // 1. まずは高速で回転し続ける
-      const spinInterval = setInterval(() => {
-        currentRotation.current -= 20 // 回転速度
-        if (wheelRef.current) {
-          wheelRef.current.style.transition = 'none'
-          wheelRef.current.style.transform = `rotate(${currentRotation.current}deg)`
-        }
-      }, 16)
-
-      // 4秒後に停止処理を開始
-      const stopTimeout = setTimeout(() => {
-        clearInterval(spinInterval)
-        if (winnerIndex !== null) {
-          const startOfSegmentAngle = winnerIndex * segmentAngle;
-          const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
-          const targetAngle = startOfSegmentAngle + overshootOffset;
-          
-          const fullRotations = Math.floor(currentRotation.current / 360)
-          const finalRotation = (fullRotations * 360) - targetAngle
-          
-          setRotation(finalRotation)
-          setIsStopping(true)
-        }
-      }, 4000)
-
-      return () => {
-        clearInterval(spinInterval)
-        clearTimeout(stopTimeout)
-      }
-    } else {
-      // isSpinningがfalseになったらリセット
-      setRotation(0)
-      currentRotation.current = 0
-    }
-  }, [isSpinning, winnerIndex, segmentAngle])
+  }, [isSpinning, winnerIndex, segmentAngle]);
 
 
   const colors = [
-    "#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1",
-    "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8",
+    "#FFD700",
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#96CEB4",
+    "#FFEAA7",
+    "#DDA0DD",
+    "#98D8C8",
+    "#F7DC6F",
+    "#BB8FCE",
+    "#85C1E9",
+    "#F8C471",
   ]
 
   return (
@@ -88,15 +66,16 @@ export function RouletteWheel({ prizes, isSpinning, winnerIndex, onStop }: Roule
 
       <div className="relative w-80 h-80 mx-auto">
         <svg
-          ref={wheelRef}
           width="320"
           height="320"
           viewBox="0 0 320 320"
-          className="transform"
-          style={{ 
-            transform: `rotate(${rotation}deg)`,
-            transition: isStopping ? 'transform 2s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none',
-          }}
+          className={`transform transition-transform duration-3000 ease-out ${isSpinning ? "roulette-spin" : ""}`}
+          style={
+            {
+              "--rotation-degrees": `${rotation}deg`,
+              transform: isSpinning ? undefined : `rotate(${rotation}deg)`
+            } as React.CSSProperties
+          }
         >
           {prizes.map((prize, index) => {
             const startAngle = (index * segmentAngle - 90) * (Math.PI / 180)
@@ -140,6 +119,14 @@ export function RouletteWheel({ prizes, isSpinning, winnerIndex, onStop }: Roule
           <circle cx="160" cy="160" r="20" fill="#333" stroke="#fff" strokeWidth="3" />
         </svg>
       </div>
+
+      {winner && !isSpinning && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-card border-2 border-primary rounded-lg p-4 shadow-lg animate-fade-in-up">
+            <p className="text-lg font-bold text-center text-primary">{winner}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
