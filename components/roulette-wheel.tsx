@@ -11,37 +11,36 @@ interface RouletteWheelProps {
 
 export function RouletteWheel({ prizes, isSpinning, winnerIndex }: RouletteWheelProps) {
   const [rotation, setRotation] = useState(0)
+  const [transitionDuration, setTransitionDuration] = useState('0s') // アニメーション時間を管理
   const segmentAngle = 360 / prizes.length
 
   useEffect(() => {
     if (isSpinning && winnerIndex !== null) {
-      const startOfSegmentAngle = winnerIndex * segmentAngle;
-      const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
-      const targetAngle = startOfSegmentAngle + overshootOffset;
-      const spins = 10 + Math.random() * 5;
-      const finalRotation = (spins * 360) - targetAngle;
-  
-      setRotation(finalRotation);
-    } else if (!isSpinning) {
-      // スピンが終わったら、次のスピンのために現在の表示角度を維持する
+      // 1. まずトランジションを無効にして、開始角度をリセット
+      setTransitionDuration('0s');
       setRotation(prev => prev % 360);
+
+      // 2. ブラウザがリセットを認識するのを待ってから、本番のアニメーションを開始
+      const timer = setTimeout(() => {
+        setTransitionDuration('6s'); // アニメーション時間を設定
+        
+        const startOfSegmentAngle = winnerIndex * segmentAngle;
+        const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
+        const targetAngle = startOfSegmentAngle + overshootOffset;
+        const spins = 10 + Math.random() * 5;
+        const finalRotation = (spins * 360) - targetAngle;
+  
+        setRotation(finalRotation);
+      }, 50); // わずかな遅延が重要
+      
+      return () => clearTimeout(timer);
     }
   }, [isSpinning, winnerIndex, segmentAngle]);
 
 
   const colors = [
-    "#FFD700",
-    "#FF6B6B",
-    "#4ECDC4",
-    "#45B7D1",
-    "#96CEB4",
-    "#FFEAA7",
-    "#DDA0DD",
-    "#98D8C8",
-    "#F7DC6F",
-    "#BB8FCE",
-    "#85C1E9",
-    "#F8C471",
+    "#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1",
+    "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8",
   ]
 
   return (
@@ -62,7 +61,7 @@ export function RouletteWheel({ prizes, isSpinning, winnerIndex }: RouletteWheel
           className="transform"
           style={{ 
             transform: `rotate(${rotation}deg)`,
-            transition: isSpinning ? 'transform 6s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
+            transition: `transform ${transitionDuration} cubic-bezier(0.25, 0.46, 0.45, 0.94)`
           }}
         >
           {prizes.map((prize, index) => {
