@@ -225,7 +225,7 @@ export default function RoulettePage() {
     ctx.textAlign = "left"
     ctx.fillText("発行者:", 50, 300)
     ctx.textAlign = "right"
-    ctx.fillText("吉田プレゼント", canvas.width - 50, 300)
+    ctx.fillText("原井川陸", canvas.width - 50, 300)
     ctx.setLineDash([5, 5])
     ctx.strokeStyle = "#d1d5db"
     ctx.lineWidth = 2
