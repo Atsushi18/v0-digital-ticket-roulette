@@ -15,15 +15,18 @@ export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: Roule
   const segmentAngle = 360 / prizes.length
 
   useEffect(() => {
-    // isSpinningがtrueになったら、計算された最終角度まで回転させる
     if (isSpinning && winnerIndex !== null) {
-      const startOfSegmentAngle = winnerIndex * segmentAngle;
-      const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
-      const targetAngle = startOfSegmentAngle + overshootOffset;
-      const spins = 10 + Math.random() * 5;
-      const finalRotation = (spins * 360) - targetAngle;
-
-      setRotation(finalRotation);
+      const timer = setTimeout(() => {
+        const startOfSegmentAngle = winnerIndex * segmentAngle;
+        const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
+        const targetAngle = startOfSegmentAngle + overshootOffset;
+        const spins = 10 + Math.random() * 5;
+        const finalRotation = (spins * 360) - targetAngle;
+  
+        setRotation(finalRotation);
+      }, 10);
+      
+      return () => clearTimeout(timer);
     }
   }, [isSpinning, winnerIndex, segmentAngle]);
 
@@ -53,17 +56,18 @@ export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: Roule
         />
       </div>
 
-      {/* --- ▼ここから修正▼ --- */}
       <div className="relative w-80 h-80 mx-auto">
+        {/* --- ▼ここから修正▼ --- */}
         <svg
           width="320"
           height="320"
           viewBox="0 0 320 320"
-          // CSS Transition を使ってアニメーションさせる
-          className="transform transition-transform duration-[6000ms] ease-out"
-          style={{ transform: `rotate(${rotation}deg)` }}
+          // will-changeを追加して、ブラウザにアニメーションすることを事前に伝える
+          className="transform transition-transform duration-[6000ms] ease-out [will-change:transform]"
+          // translateZ(0)を追加して、GPUアクセラレーションを有効にする（スマホでの動作が安定します）
+          style={{ transform: `rotate(${rotation}deg) translateZ(0)` }}
         >
-      {/* --- ▲ここまで修正▲ --- */}
+        {/* --- ▲ここまで修正▲ --- */}
           {prizes.map((prize, index) => {
             const startAngle = (index * segmentAngle - 90) * (Math.PI / 180)
             const endAngle = ((index + 1) * segmentAngle - 90) * (Math.PI / 180)
