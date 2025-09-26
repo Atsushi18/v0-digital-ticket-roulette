@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 
 interface RouletteWheelProps {
@@ -16,15 +15,17 @@ export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: Roule
   const segmentAngle = 360 / prizes.length
 
   useEffect(() => {
+    // isSpinningがtrueになったら、計算された最終角度まで回転させる
     if (isSpinning && winnerIndex !== null) {
-      const targetAngle = winnerIndex * segmentAngle
-      const randomOffset = (segmentAngle / 2) * (Math.random() * 0.8 - 0.4)
-      const spins = 5 + Math.random() * 5
-      const finalRotation = spins * 360 - targetAngle - randomOffset
+      const startOfSegmentAngle = winnerIndex * segmentAngle;
+      const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
+      const targetAngle = startOfSegmentAngle + overshootOffset;
+      const spins = 10 + Math.random() * 5;
+      const finalRotation = (spins * 360) - targetAngle;
 
-      setRotation(finalRotation)
+      setRotation(finalRotation);
     }
-  }, [isSpinning, winnerIndex])
+  }, [isSpinning, winnerIndex, segmentAngle]);
 
 
   const colors = [
@@ -44,8 +45,6 @@ export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: Roule
 
   return (
     <div className="relative">
-      {/* --- ▼ここを修正▼ --- */}
-      {/* Pointer */}
       <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-10 drop-shadow-lg">
         <div className="w-0 h-0 
           border-l-[12px] border-l-transparent
@@ -53,22 +52,18 @@ export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: Roule
           border-t-[24px] border-t-primary-foreground"
         />
       </div>
-      {/* --- ▲ここまで修正▲ --- */}
 
-      {/* Wheel */}
+      {/* --- ▼ここから修正▼ --- */}
       <div className="relative w-80 h-80 mx-auto">
         <svg
           width="320"
           height="320"
           viewBox="0 0 320 320"
-          className={`transform transition-transform duration-3000 ease-out ${isSpinning ? "roulette-spin" : ""}`}
-          style={
-            {
-              "--rotation-degrees": `${rotation}deg`,
-              transform: isSpinning ? undefined : `rotate(${rotation}deg)`
-            } as React.CSSProperties
-          }
+          // CSS Transition を使ってアニメーションさせる
+          className="transform transition-transform duration-[6000ms] ease-out"
+          style={{ transform: `rotate(${rotation}deg)` }}
         >
+      {/* --- ▲ここまで修正▲ --- */}
           {prizes.map((prize, index) => {
             const startAngle = (index * segmentAngle - 90) * (Math.PI / 180)
             const endAngle = ((index + 1) * segmentAngle - 90) * (Math.PI / 180)

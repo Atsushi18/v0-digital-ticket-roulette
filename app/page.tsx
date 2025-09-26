@@ -30,6 +30,7 @@ export default function RoulettePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const [showMediaUpload, setShowMediaUpload] = useState(false)
+  const [gameKey, setGameKey] = useState(0) // ★ルーレットをリセットするためのキーを追加
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -119,16 +120,19 @@ export default function RoulettePage() {
     setShowCutIn(false)
     setInitialResult(null)
     
-    const hazureIndices = prizes
-      .map((prize, index) => (prize === "はずれ" ? index : -1))
-      .filter(index => index !== -1);
-
-    if(hazureIndices.length === 0) {
-        alert("「はずれ」の選択肢がありません！");
-        return;
+    const atariIndex = prizes.findIndex(p => p === "ごちそう券");
+    if (atariIndex === -1) {
+      alert("「ごちそう券」がありません！");
+      return;
     }
     
-    const targetIndex = hazureIndices[Math.floor(Math.random() * hazureIndices.length)];
+    const targetIndex = (atariIndex + 1) % prizes.length;
+
+    if (prizes[targetIndex] !== "はずれ") {
+      alert("「ごちそう券」の隣に「はずれ」がありません！惜しい演出ができません。");
+      return;
+    }
+    
     setWinnerIndex(targetIndex);
     
     setIsSpinning(true)
@@ -142,7 +146,7 @@ export default function RoulettePage() {
       setTimeout(() => {
         setShowCutIn(true)
       }, 2000)
-    }, 3000)
+    }, 6000)
   }
 
   const handleCutinEnd = () => {
@@ -253,6 +257,7 @@ export default function RoulettePage() {
     setIsSpinning(false)
     setShowCutIn(false)
     setInitialResult(null)
+    setGameKey(prevKey => prevKey + 1) // ★キーを更新してルーレットをリセット
   }
 
   return (
@@ -362,8 +367,6 @@ export default function RoulettePage() {
             <CardContent className="p-8">
               <div className="flex flex-col items-center space-y-8">
                 
-                {/* --- ▼ここから修正▼ --- */}
-
                 {showCutIn && (
                   <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                     <div className="max-w-4xl max-h-4xl w-full h-full flex items-center justify-center p-8">
@@ -387,7 +390,6 @@ export default function RoulettePage() {
                 )}
 
                 {winner && !showCutIn && showTicket && winner !== "はずれ" ? (
-                  // 【当選後】チケット表示
                   <div className="w-full max-w-md flex flex-col items-center space-y-4">
                     <div className="text-center">
                       <h2 className="text-3xl font-bold text-primary mb-2">🎉 おめでとう！</h2>
@@ -402,9 +404,8 @@ export default function RoulettePage() {
                     </Button>
                   </div>
                 ) : (
-                  // 【通常時】ルーレット表示
                   <>
-                    <RouletteWheel prizes={prizes} isSpinning={isSpinning} winner={initialResult} winnerIndex={winnerIndex} />
+                    <RouletteWheel key={gameKey} prizes={prizes} isSpinning={isSpinning} winner={initialResult} winnerIndex={winnerIndex} />
                     <div className="text-center space-y-4">
                       <Button onClick={spinRoulette} disabled={isSpinning || showCutIn} size="lg" className="px-8 py-4 text-lg font-semibold">
                         {isSpinning ? "ルーレット回転中..." : showCutIn ? "カットイン中..." : "ルーレットを回す！"}
@@ -425,8 +426,6 @@ export default function RoulettePage() {
                   </>
                 )}
                 
-                {/* --- ▲ここまで修正▲ --- */}
-
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold mb-4 text-center">賞品一覧</h3>
                   <div className="flex flex-wrap gap-2 justify-center">
