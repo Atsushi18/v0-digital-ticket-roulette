@@ -125,15 +125,3 @@
     @apply bg-background text-foreground;
   }
 }
-@keyframes infinite-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spinning {
-  animation: infinite-spin 1s linear infinite;
-}

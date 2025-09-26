@@ -29,8 +29,6 @@ export default function RoulettePage() {
   const ticketRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [showMediaUpload, setShowMediaUpload] = useState(false)
-  const [gameKey, setGameKey] = useState(0)
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -86,7 +84,6 @@ export default function RoulettePage() {
       const result = e.target?.result as string
       setCutinMedia(result)
       setCutinMediaType(mediaType)
-      setShowMediaUpload(false)
 
       try {
         await localforage.setItem("cutinMedia", result)
@@ -112,10 +109,9 @@ export default function RoulettePage() {
   }
   
   const spinRoulette = () => {
-    if (isSpinning || prizes.length === 0) return
+    if (isSpinning) return
 
     setWinner(null)
-    setWinnerIndex(null)
     setShowTicket(false)
     setShowCutIn(false)
     setInitialResult(null)
@@ -134,7 +130,6 @@ export default function RoulettePage() {
     }
     
     setWinnerIndex(targetIndex);
-    
     setIsSpinning(true)
 
     setTimeout(() => {
@@ -260,12 +255,11 @@ export default function RoulettePage() {
 
   const resetGame = () => {
     setWinner(null)
-    setWinnerIndex(null)
     setShowTicket(false)
-    setIsSpinning(false)
     setShowCutIn(false)
     setInitialResult(null)
-    setGameKey(prevKey => prevKey + 1)
+    setIsSpinning(false)
+    setWinnerIndex(null)
   }
 
   return (
@@ -371,7 +365,7 @@ export default function RoulettePage() {
           </Card>
         )}
         <div className="grid lg:grid-cols-1 gap-8">
-          <Card className="lg-col-span-1">
+          <Card className="lg:col-span-1">
             <CardContent className="p-8">
               <div className="flex flex-col items-center space-y-8">
                 
@@ -386,7 +380,6 @@ export default function RoulettePage() {
                             className="max-w-full max-h-full object-contain"
                           />
                         ) : (
-                          // --- ▼ここから修正▼ ---
                           <video 
                             ref={videoRef} 
                             src={cutinMedia} 
@@ -394,7 +387,6 @@ export default function RoulettePage() {
                             playsInline
                             className="max-w-full max-h-full object-contain" 
                           />
-                          // --- ▲ここまで修正▲ ---
                         )
                       ) : (
                         <div className="bg-gradient-to-r from-yellow-400 to-red-500 text-white text-6xl font-bold p-8 rounded-lg shadow-2xl animate-bounce">
@@ -421,19 +413,23 @@ export default function RoulettePage() {
                   </div>
                 ) : (
                   <>
-                    <RouletteWheel key={gameKey} prizes={prizes} isSpinning={isSpinning} winner={initialResult} winnerIndex={winnerIndex} />
+                    <RouletteWheel 
+                      prizes={prizes} 
+                      isSpinning={isSpinning} 
+                      winnerIndex={winnerIndex} 
+                    />
                     <div className="text-center space-y-4">
-                      <Button onClick={spinRoulette} disabled={isSpinning || showCutIn} size="lg" className="px-8 py-4 text-lg font-semibold">
-                        {isSpinning ? "ルーレット回転中..." : showCutIn ? "カットイン中..." : "ルーレットを回す！"}
+                      <Button onClick={spinRoulette} disabled={isSpinning} size="lg" className="px-8 py-4 text-lg font-semibold">
+                        {isSpinning ? "ルーレット回転中..." : "ルーレットを回す！"}
                       </Button>
                       {winner && !showCutIn && (
                         <div className="space-y-4">
                           <div className="text-center">
                             <h2 className="text-3xl font-bold text-primary mb-2">
-                              {winner === "はずれ" ? "😢 残念！" : "🎉 おめでとう！"}
+                              {winner === "はずれ" ? "😢 残念！" : ""}
                             </h2>
                             <p className="text-xl text-foreground">
-                              {winner === "はずれ" ? "はずれでした..." : `${winner}が当たりました！`}
+                              {winner === "はずれ" ? "はずれでした..." : ""}
                             </p>
                           </div>
                         </div>

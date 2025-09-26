@@ -6,27 +6,25 @@ import { useEffect, useState } from "react"
 interface RouletteWheelProps {
   prizes: string[]
   isSpinning: boolean
-  winner: string | null
   winnerIndex: number | null
 }
 
-export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: RouletteWheelProps) {
+export function RouletteWheel({ prizes, isSpinning, winnerIndex }: RouletteWheelProps) {
   const [rotation, setRotation] = useState(0)
   const segmentAngle = 360 / prizes.length
 
   useEffect(() => {
     if (isSpinning && winnerIndex !== null) {
-      const timer = setTimeout(() => {
-        const startOfSegmentAngle = winnerIndex * segmentAngle;
-        const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
-        const targetAngle = startOfSegmentAngle + overshootOffset;
-        const spins = 10 + Math.random() * 5;
-        const finalRotation = (spins * 360) - targetAngle;
+      const startOfSegmentAngle = winnerIndex * segmentAngle;
+      const overshootOffset = segmentAngle * (0.1 + Math.random() * 0.1);
+      const targetAngle = startOfSegmentAngle + overshootOffset;
+      const spins = 10 + Math.random() * 5;
+      const finalRotation = (spins * 360) - targetAngle;
   
-        setRotation(finalRotation);
-      }, 10);
-      
-      return () => clearTimeout(timer);
+      setRotation(finalRotation);
+    } else if (!isSpinning) {
+      // スピンが終わったら、次のスピンのために現在の表示角度を維持する
+      setRotation(prev => prev % 360);
     }
   }, [isSpinning, winnerIndex, segmentAngle]);
 
@@ -57,17 +55,16 @@ export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: Roule
       </div>
 
       <div className="relative w-80 h-80 mx-auto">
-        {/* --- ▼ここから修正▼ --- */}
         <svg
           width="320"
           height="320"
           viewBox="0 0 320 320"
-          // will-changeを追加して、ブラウザにアニメーションすることを事前に伝える
-          className="transform transition-transform duration-[6000ms] ease-out [will-change:transform]"
-          // translateZ(0)を追加して、GPUアクセラレーションを有効にする（スマホでの動作が安定します）
-          style={{ transform: `rotate(${rotation}deg) translateZ(0)` }}
+          className="transform"
+          style={{ 
+            transform: `rotate(${rotation}deg)`,
+            transition: isSpinning ? 'transform 6s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
+          }}
         >
-        {/* --- ▲ここまで修正▲ --- */}
           {prizes.map((prize, index) => {
             const startAngle = (index * segmentAngle - 90) * (Math.PI / 180)
             const endAngle = ((index + 1) * segmentAngle - 90) * (Math.PI / 180)
@@ -110,14 +107,6 @@ export function RouletteWheel({ prizes, isSpinning, winner, winnerIndex }: Roule
           <circle cx="160" cy="160" r="20" fill="#333" stroke="#fff" strokeWidth="3" />
         </svg>
       </div>
-
-      {winner && !isSpinning && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-card border-2 border-primary rounded-lg p-4 shadow-lg animate-fade-in-up">
-            <p className="text-lg font-bold text-center text-primary">{winner}</p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
