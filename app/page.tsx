@@ -217,12 +217,12 @@ export default function RoulettePage() {
       if (audioRef2.current && upgradeAudio2) {
         audioRef2.current.play().catch(e => {
           console.error("音声2の再生に失敗:", e);
-          triggerCutin(); // 2つ目の音声も失敗したらカットインへ
+          triggerCutin();
         });
       } else {
-        triggerCutin(); // 2つ目の音声がなければカットインへ
+        triggerCutin();
       }
-    }, 1000); // 1秒待ってから再生
+    }, 1000);
   }
 
   const triggerCutin = () => {
@@ -316,7 +316,7 @@ export default function RoulettePage() {
     ctx.textAlign = "left"
     ctx.fillText("発行者:", 50, 300)
     ctx.textAlign = "right"
-    ctx.fillText("原井川　陸　feat.我伊野　司", canvas.width - 50, 300)
+    ctx.fillText("吉田プレゼント", canvas.width - 50, 300)
     ctx.setLineDash([5, 5])
     ctx.strokeStyle = "#d1d5db"
     ctx.lineWidth = 2
@@ -329,7 +329,7 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af"
     ctx.textAlign = "center"
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360)
-    ctx.fillText("※ 原井川陸に食事代金を肩代わりさせることができます", canvas.width / 2, 380)
+    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380)
     ctx.font = "32px Arial"
     ctx.fillText("🎉", canvas.width / 2, 420)
     const link = document.createElement("a")
@@ -453,7 +453,7 @@ export default function RoulettePage() {
                   <input
                     ref={audioFileInputRef1}
                     type="file"
-                    accept="audio/*"
+                    accept="audio/*,.mp3"
                     onChange={handleAudioUpload1}
                     className="hidden"
                   />
@@ -480,11 +480,11 @@ export default function RoulettePage() {
               </div>
               <div className="space-y-4 mt-4">
                 <div>
-                  <label className="text-sm font-medium">音声2 (1秒後に再生)</label>
+                  <label className="text-sm font-medium">音声2 (音声1の1秒後に再生)</label>
                   <input
                     ref={audioFileInputRef2}
                     type="file"
-                    accept="audio/*"
+                    accept="audio/*,.mp3"
                     onChange={handleAudioUpload2}
                     className="hidden"
                   />
