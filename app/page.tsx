@@ -38,7 +38,7 @@ export default function RoulettePage() {
   const [interludeMediaType, setInterludeMediaType] = useState<"image" | "video" | null>(null);
   const [interludeAudio, setInterludeAudio] = useState<string | null>(null);
   const [showInterlude, setShowInterlude] = useState(false);
-  const [showHazureScreen, setShowHazureScreen] = useState(false); // ★はずれ画面の表示状態
+  const [winningAudio, setWinningAudio] = useState<string | null>(null); // ★当たり音声用
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -55,6 +55,7 @@ export default function RoulettePage() {
   const upgradeImage2FileInputRef = useRef<HTMLInputElement>(null);
   const interludeMediaFileInputRef = useRef<HTMLInputElement>(null);
   const interludeAudioFileInputRef = useRef<HTMLInputElement>(null);
+  const winningAudioFileInputRef = useRef<HTMLInputElement>(null); // ★当たり音声用のref
   const videoRef = useRef<HTMLVideoElement>(null)
   const interludeVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef1 = useRef<HTMLAudioElement>(null)
@@ -63,6 +64,7 @@ export default function RoulettePage() {
   const cutinAudioRef = useRef<HTMLAudioElement>(null);
   const pushButtonAudioRef = useRef<HTMLAudioElement>(null);
   const interludeAudioRef = useRef<HTMLAudioElement>(null);
+  const winningAudioRef = useRef<HTMLAudioElement>(null); // ★当たり音声audio要素用のref
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -79,6 +81,7 @@ export default function RoulettePage() {
       const savedInterludeMedia = await localforage.getItem<string>("interludeMedia");
       const savedInterludeMediaType = await localforage.getItem<"image" | "video" | null>("interludeMediaType");
       const savedInterludeAudio = await localforage.getItem<string>("interludeAudio");
+      const savedWinningAudio = await localforage.getItem<string>("winningAudio");
       
       if (savedMedia && savedMediaType) {
         setCutinMedia(savedMedia)
@@ -97,6 +100,7 @@ export default function RoulettePage() {
         setInterludeMediaType(savedInterludeMediaType);
       }
       if (savedInterludeAudio) setInterludeAudio(savedInterludeAudio);
+      if (savedWinningAudio) setWinningAudio(savedWinningAudio);
     }
     loadAssets()
   }, [])
@@ -212,7 +216,7 @@ export default function RoulettePage() {
   const spinRoulette = () => {
     if (isSpinning) return;
     
-    [drumrollAudioRef, audioRef1, audioRef2, cutinAudioRef, pushButtonAudioRef, videoRef, interludeVideoRef].forEach(ref => {
+    [drumrollAudioRef, audioRef1, audioRef2, cutinAudioRef, pushButtonAudioRef, winningAudioRef, videoRef, interludeVideoRef].forEach(ref => {
       if(ref.current) ref.current.load();
     });
 
@@ -224,7 +228,6 @@ export default function RoulettePage() {
     setShowUpgradeImage1(false);
     setShowInterlude(false);
     setShowUpgradeImage2(false);
-    setShowHazureScreen(false);
     setWinner(null)
     setShowTicket(false)
     setShowCutIn(false)
@@ -260,15 +263,12 @@ export default function RoulettePage() {
     setWinner(resultPrize);
     setIsSpinning(false)
 
-    setShowHazureScreen(true);
-    
     setTimeout(() => {
-      setShowHazureScreen(false);
       setShowPushButton(true);
       if (pushButtonAudioRef.current && pushButtonAudio) {
         pushButtonAudioRef.current.play().catch(e => console.error("押せボタン音声の再生に失敗:", e));
       }
-    }, 4000);
+    }, 2000);
   }
 
   const handlePushButtonClick = () => {
@@ -355,6 +355,14 @@ export default function RoulettePage() {
     setWinner("食い逃げ券");
     setShowTicket(true);
   }
+  
+  useEffect(() => {
+    if (showTicket) {
+      if(winningAudioRef.current && winningAudio) {
+        winningAudioRef.current.play().catch(e => console.error("当たり音声の再生に失敗:", e));
+      }
+    }
+  },[showTicket])
 
   useEffect(() => {
     if (showCutIn) {
@@ -454,7 +462,7 @@ export default function RoulettePage() {
     ctx.textAlign = "left";
     ctx.fillText("発行者:", 50, 300);
     ctx.textAlign = "right";
-    ctx.fillText("原井川　陸　feat.我伊野　司", canvas.width - 50, 300);
+    ctx.fillText("吉田プレゼント", canvas.width - 50, 300);
     ctx.setLineDash([5, 5]);
     ctx.strokeStyle = "#d1d5db";
     ctx.lineWidth = 2;
@@ -467,7 +475,7 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "center";
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360);
-    ctx.fillText("※ 原井川陸に食事代金を肩代わりさせることができます", canvas.width / 2, 380);
+    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380);
     ctx.font = "32px Arial";
     ctx.fillText("🎉", canvas.width / 2, 420);
     const link = document.createElement("a");
@@ -501,6 +509,7 @@ export default function RoulettePage() {
       <audio ref={interludeAudioRef} src={interludeAudio || ""} onEnded={handleInterludeEnd} />
       <audio ref={audioRef2} src={upgradeAudio2 || ""} onEnded={handleAudio2End} />
       <audio ref={cutinAudioRef} src={cutinAudio || ""} onEnded={handleCutinEnd}/>
+      <audio ref={winningAudioRef} src={winningAudio || ""} />
       
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -871,6 +880,37 @@ export default function RoulettePage() {
                   </div>
                 )}
               </div>
+              <h3 className="text-lg font-semibold my-4 pt-4 border-t">当たり表示時の音声設定</h3>
+              <div className="space-y-4">
+                <div>
+                  <input
+                    ref={winningAudioFileInputRef}
+                    type="file"
+                    accept="audio/*,.mp3,.m4a"
+                    onChange={(e) => handleAudioUpload(e, setWinningAudio, "winningAudio")}
+                    className="hidden"
+                  />
+                  <Button onClick={() => winningAudioFileInputRef.current?.click()} variant="outline" className="w-full">
+                    <Upload className="w-4 h-4 mr-2" />
+                    当たり用音声をアップロード
+                  </Button>
+                </div>
+                {winningAudio && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 音声ファイルあり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={() => removeAsset(setWinningAudio, winningAudioFileInputRef, "winningAudio")}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <audio src={winningAudio} controls className="w-full" />
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -919,7 +959,7 @@ export default function RoulettePage() {
                     </button>
                   </div>
                 )}
-                
+
                 {showUpgradeImage1 && upgradeImage1 && (
                   <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                     <img src={upgradeImage1} alt="昇格演出画像1" className="max-w-full max-h-full object-contain" />
@@ -939,7 +979,6 @@ export default function RoulettePage() {
                     <img src={upgradeImage2} alt="昇格演出画像2" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
-
 
                 {winner && !showCutIn && showTicket && winner !== "はずれ" ? (
                   <div className="w-full max-w-md flex flex-col items-center space-y-4">
