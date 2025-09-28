@@ -19,30 +19,42 @@ export default function RoulettePage() {
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null)
   const [showTicket, setShowTicket] = useState(false)
   const [showCutIn, setShowCutIn] = useState(false)
-  const [showHazureCard, setShowHazureCard] = useState(false) // ★はずれカード用の状態
-  const [isUpgrading, setIsUpgrading] = useState(false)
   const [initialResult, setInitialResult] = useState<string | null>(null)
   const [cutinMedia, setCutinMedia] = useState<string | null>(null)
   const [cutinMediaType, setCutinMediaType] = useState<"image" | "video" | null>(null)
+  const [upgradeAudio1, setUpgradeAudio1] = useState<string | null>(null)
+  const [upgradeAudio2, setUpgradeAudio2] = useState<string | null>(null)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const ticketRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const audioFileInputRef1 = useRef<HTMLInputElement>(null)
+  const audioFileInputRef2 = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const audioRef1 = useRef<HTMLAudioElement>(null)
+  const audioRef2 = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
-    const loadMedia = async () => {
+    const loadAssets = async () => {
       const savedMedia = await localforage.getItem<string>("cutinMedia")
       const savedMediaType = (await localforage.getItem<"image" | "video" | null>("cutinMediaType"))
+      const savedAudio1 = await localforage.getItem<string>("upgradeAudio1")
+      const savedAudio2 = await localforage.getItem<string>("upgradeAudio2")
       
       if (savedMedia && savedMediaType) {
         setCutinMedia(savedMedia)
         setCutinMediaType(savedMediaType)
       }
+      if (savedAudio1) {
+        setUpgradeAudio1(savedAudio1)
+      }
+      if (savedAudio2) {
+        setUpgradeAudio2(savedAudio2)
+      }
     }
-    loadMedia()
+    loadAssets()
   }, [])
 
   const handlePasswordSubmit = () => {
@@ -67,47 +79,92 @@ export default function RoulettePage() {
   }
 
   const handleMediaUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const fileType = file.type
-    let mediaType: "image" | "video" | null = null
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const fileType = file.type;
+    let mediaType: "image" | "video" | null = null;
     if (fileType.startsWith("image/")) {
-      mediaType = "image"
+      mediaType = "image";
     } else if (fileType.startsWith("video/")) {
-      mediaType = "video"
+      mediaType = "video";
     } else {
-      alert("画像または動画ファイルを選択してください")
-      return
+      alert("画像または動画ファイルを選択してください");
+      return;
     }
-
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = async (e) => {
-      const result = e.target?.result as string
-      setCutinMedia(result)
-      setCutinMediaType(mediaType)
-
+      const result = e.target?.result as string;
+      setCutinMedia(result);
+      setCutinMediaType(mediaType);
       try {
-        await localforage.setItem("cutinMedia", result)
+        await localforage.setItem("cutinMedia", result);
         if (mediaType) {
-          await localforage.setItem("cutinMediaType", mediaType)
+          await localforage.setItem("cutinMediaType", mediaType);
         }
       } catch (err) {
-        console.error("保存に失敗しました:", err)
-        alert("メディアの保存に失敗しました。ファイルサイズが大きすぎる可能性があります。")
+        console.error("保存に失敗しました:", err);
+        alert("メディアの保存に失敗しました。ファイルサイズが大きすぎる可能性があります。");
       }
+    };
+    reader.readAsDataURL(file);
+  }
+  
+  const handleAudioUpload1 = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) {
+      alert("音声ファイルを選択してください。");
+      return;
     }
-    reader.readAsDataURL(file)
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      setUpgradeAudio1(result);
+      await localforage.setItem("upgradeAudio1", result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const handleAudioUpload2 = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) {
+      alert("音声ファイルを選択してください。");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      setUpgradeAudio2(result);
+      await localforage.setItem("upgradeAudio2", result);
+    };
+    reader.readAsDataURL(file);
   }
 
   const removeCutinMedia = async () => {
-    setCutinMedia(null)
-    setCutinMediaType(null)
+    setCutinMedia(null);
+    setCutinMediaType(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
     }
-    await localforage.removeItem("cutinMedia")
-    await localforage.removeItem("cutinMediaType")
+    await localforage.removeItem("cutinMedia");
+    await localforage.removeItem("cutinMediaType");
+  }
+
+  const removeUpgradeAudio1 = async () => {
+    setUpgradeAudio1(null);
+    if (audioFileInputRef1.current) {
+      audioFileInputRef1.current.value = "";
+    }
+    await localforage.removeItem("upgradeAudio1");
+  }
+
+  const removeUpgradeAudio2 = async () => {
+    setUpgradeAudio2(null);
+    if (audioFileInputRef2.current) {
+      audioFileInputRef2.current.value = "";
+    }
+    await localforage.removeItem("upgradeAudio2");
   }
   
   const spinRoulette = () => {
@@ -116,9 +173,7 @@ export default function RoulettePage() {
     setWinner(null)
     setShowTicket(false)
     setShowCutIn(false)
-    setShowHazureCard(false)
     setInitialResult(null)
-    setIsUpgrading(false)
     
     const atariIndex = prizes.findIndex(p => p === "食い逃げ券");
     if (atariIndex === -1) {
@@ -139,36 +194,46 @@ export default function RoulettePage() {
 
   const handleRouletteStop = () => {
     if (winnerIndex === null) return;
+    
     const resultPrize = prizes[winnerIndex];
     setInitialResult(resultPrize);
     setWinner(resultPrize);
     setIsSpinning(false)
 
-    // ★ルーレット停止後、はずれカードを表示
-    setShowHazureCard(true);
-
     setTimeout(() => {
-      setShowCutIn(true)
-    }, 1500) // 少し早めにカットイン
+      if (audioRef1.current && upgradeAudio1) {
+        audioRef1.current.play().catch(e => {
+          console.error("音声1の再生に失敗:", e);
+          triggerCutin();
+        });
+      } else {
+        triggerCutin();
+      }
+    }, 2000);
+  }
+  
+  const playAudio2 = () => {
+    setTimeout(() => {
+      if (audioRef2.current && upgradeAudio2) {
+        audioRef2.current.play().catch(e => {
+          console.error("音声2の再生に失敗:", e);
+          triggerCutin(); // 2つ目の音声も失敗したらカットインへ
+        });
+      } else {
+        triggerCutin(); // 2つ目の音声がなければカットインへ
+      }
+    }, 1000); // 1秒待ってから再生
+  }
+
+  const triggerCutin = () => {
+    setShowCutIn(true);
   }
 
   const handleCutinEnd = () => {
     setShowCutIn(false)
-    setIsUpgrading(true) // ★カットイン後に昇格アニメーションを開始
+    setWinner("食い逃げ券");
+    setShowTicket(true);
   }
-
-  // ★昇格アニメーションを管理するuseEffect
-  useEffect(() => {
-    if (isUpgrading) {
-      const timer = setTimeout(() => {
-        setIsUpgrading(false);
-        setShowHazureCard(false);
-        setWinner("食い逃げ券");
-        setShowTicket(true);
-      }, 2000); // 2秒間の昇格アニメーション
-      return () => clearTimeout(timer);
-    }
-  }, [isUpgrading]);
 
   useEffect(() => {
     if (showCutIn) {
@@ -180,12 +245,12 @@ export default function RoulettePage() {
         
         videoElement.play().catch(error => {
           console.error("動画の自動再生に失敗しました:", error)
-          setTimeout(() => handleCutinEnd(), 2000) // フォールバックも2秒に
+          setTimeout(() => handleCutinEnd(), 2000)
         })
         
         return () => videoElement.removeEventListener("ended", onVideoEnd)
       } else {
-        const timer = setTimeout(() => handleCutinEnd(), 2000) // 画像のカットインも2秒に
+        const timer = setTimeout(() => handleCutinEnd(), 2000)
         return () => clearTimeout(timer)
       }
     }
@@ -251,7 +316,7 @@ export default function RoulettePage() {
     ctx.textAlign = "left"
     ctx.fillText("発行者:", 50, 300)
     ctx.textAlign = "right"
-    ctx.fillText("原井川陸", canvas.width - 50, 300)
+    ctx.fillText("原井川　陸　feat.我伊野　司", canvas.width - 50, 300)
     ctx.setLineDash([5, 5])
     ctx.strokeStyle = "#d1d5db"
     ctx.lineWidth = 2
@@ -264,7 +329,7 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af"
     ctx.textAlign = "center"
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360)
-    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380)
+    ctx.fillText("※ 原井川陸に食事代金を肩代わりさせることができます", canvas.width / 2, 380)
     ctx.font = "32px Arial"
     ctx.fillText("🎉", canvas.width / 2, 420)
     const link = document.createElement("a")
@@ -280,12 +345,13 @@ export default function RoulettePage() {
     setInitialResult(null)
     setIsSpinning(false)
     setWinnerIndex(null)
-    setShowHazureCard(false)
-    setIsUpgrading(false)
   }
 
   return (
     <div className="min-h-screen bg-background">
+      <audio ref={audioRef1} src={upgradeAudio1 || ""} onEnded={playAudio2} />
+      <audio ref={audioRef2} src={upgradeAudio2 || ""} onEnded={triggerCutin} />
+      
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -379,9 +445,69 @@ export default function RoulettePage() {
                     </div>
                   </div>
                 )}
-                <p className="text-sm text-muted-foreground">
-                  ※ アップロードした画像や動画がカットイン演出で表示されます
-                </p>
+              </div>
+              <h3 className="text-lg font-semibold my-4 pt-4 border-t">昇格演出の音声設定</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">音声1 (先に再生)</label>
+                  <input
+                    ref={audioFileInputRef1}
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleAudioUpload1}
+                    className="hidden"
+                  />
+                  <Button onClick={() => audioFileInputRef1.current?.click()} variant="outline" className="w-full mt-2">
+                    <Upload className="w-4 h-4 mr-2" />
+                    音声ファイル1をアップロード
+                  </Button>
+                </div>
+                {upgradeAudio1 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 音声ファイル1あり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={removeUpgradeAudio1}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <audio src={upgradeAudio1} controls className="w-full" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="text-sm font-medium">音声2 (1秒後に再生)</label>
+                  <input
+                    ref={audioFileInputRef2}
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleAudioUpload2}
+                    className="hidden"
+                  />
+                  <Button onClick={() => audioFileInputRef2.current?.click()} variant="outline" className="w-full mt-2">
+                    <Upload className="w-4 h-4 mr-2" />
+                    音声ファイル2をアップロード
+                  </Button>
+                </div>
+                {upgradeAudio2 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 音声ファイル2あり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={removeUpgradeAudio2}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <audio src={upgradeAudio2} controls className="w-full" />
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -419,18 +545,6 @@ export default function RoulettePage() {
                     </div>
                   </div>
                 )}
-                
-                {showHazureCard && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
-                    <Card className={`w-96 ${isUpgrading ? 'upgrade-animation' : ''}`}>
-                       <CardContent className="p-8 text-center space-y-4">
-                         <h2 className="text-4xl font-bold text-destructive mb-2">😢 残念！</h2>
-                         <p className="text-2xl text-foreground">はずれでした...</p>
-                       </CardContent>
-                    </Card>
-                  </div>
-                )}
-
 
                 {winner && !showCutIn && showTicket && winner !== "はずれ" ? (
                   <div className="w-full max-w-md flex flex-col items-center space-y-4">
@@ -458,6 +572,18 @@ export default function RoulettePage() {
                       <Button onClick={spinRoulette} disabled={isSpinning} size="lg" className="px-8 py-4 text-lg font-semibold">
                         {isSpinning ? "ルーレット回転中..." : "ルーレットを回す！"}
                       </Button>
+                      {winner && !showCutIn && (
+                        <div className="space-y-4">
+                          <div className="text-center">
+                            <h2 className="text-3xl font-bold text-primary mb-2">
+                              {winner === "はずれ" ? "😢 残念！" : ""}
+                            </h2>
+                            <p className="text-xl text-foreground">
+                              {winner === "はずれ" ? "はずれでした..." : ""}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

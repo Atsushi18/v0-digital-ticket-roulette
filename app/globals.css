@@ -136,3 +136,15 @@
 .upgrade-animation {
   animation: upgrade-animation 2s ease-in-out forwards;
 }
+@keyframes infinite-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  animation: infinite-spin 1s linear infinite;
+}
