@@ -33,7 +33,7 @@ export function PrizeTicket({ prizeName }: PrizeTicketProps) {
           </div>
           <div className="flex justify-between">
             <span>発行者:</span>
-            <span>原井川陸</span>
+            <span>原井川　陸　feat.我伊野　司</span>
           </div>
         </div>
 

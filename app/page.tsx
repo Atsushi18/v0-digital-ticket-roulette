@@ -38,6 +38,7 @@ export default function RoulettePage() {
   const [interludeMediaType, setInterludeMediaType] = useState<"image" | "video" | null>(null);
   const [interludeAudio, setInterludeAudio] = useState<string | null>(null);
   const [showInterlude, setShowInterlude] = useState(false);
+  const [showHazureScreen, setShowHazureScreen] = useState(false); // ★はずれ画面の表示状態
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -211,7 +212,6 @@ export default function RoulettePage() {
   const spinRoulette = () => {
     if (isSpinning) return;
     
-    // 全てのメディアをロードして再生準備
     [drumrollAudioRef, audioRef1, audioRef2, cutinAudioRef, pushButtonAudioRef, videoRef, interludeVideoRef].forEach(ref => {
       if(ref.current) ref.current.load();
     });
@@ -224,6 +224,7 @@ export default function RoulettePage() {
     setShowUpgradeImage1(false);
     setShowInterlude(false);
     setShowUpgradeImage2(false);
+    setShowHazureScreen(false);
     setWinner(null)
     setShowTicket(false)
     setShowCutIn(false)
@@ -259,12 +260,15 @@ export default function RoulettePage() {
     setWinner(resultPrize);
     setIsSpinning(false)
 
+    setShowHazureScreen(true);
+    
     setTimeout(() => {
+      setShowHazureScreen(false);
       setShowPushButton(true);
       if (pushButtonAudioRef.current && pushButtonAudio) {
         pushButtonAudioRef.current.play().catch(e => console.error("押せボタン音声の再生に失敗:", e));
       }
-    }, 2000);
+    }, 4000);
   }
 
   const handlePushButtonClick = () => {
@@ -297,6 +301,7 @@ export default function RoulettePage() {
   
   const playInterlude = () => {
     setShowInterlude(true);
+
     if (interludeAudioRef.current && interludeAudio) {
       interludeAudioRef.current.play().catch(e => {
         console.error("中間音声の再生に失敗:", e);
@@ -309,7 +314,7 @@ export default function RoulettePage() {
         console.error("中間動画の再生に失敗", e)
         handleInterludeEnd();
       });
-    } else if (!interludeAudio) { // 音声も動画もない場合
+    } else if (!interludeAudio) {
       setTimeout(handleInterludeEnd, 2000);
     }
   }
@@ -318,6 +323,7 @@ export default function RoulettePage() {
     setShowInterlude(false);
     playUpgradeAudio2();
   }
+
 
   const playUpgradeAudio2 = () => {
     setShowUpgradeImage2(true);
@@ -448,7 +454,7 @@ export default function RoulettePage() {
     ctx.textAlign = "left";
     ctx.fillText("発行者:", 50, 300);
     ctx.textAlign = "right";
-    ctx.fillText("吉田プレゼント", canvas.width - 50, 300);
+    ctx.fillText("原井川　陸　feat.我伊野　司", canvas.width - 50, 300);
     ctx.setLineDash([5, 5]);
     ctx.strokeStyle = "#d1d5db";
     ctx.lineWidth = 2;
@@ -461,7 +467,7 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "center";
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360);
-    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380);
+    ctx.fillText("※ 原井川陸に食事代金を肩代わりさせることができます", canvas.width / 2, 380);
     ctx.font = "32px Arial";
     ctx.fillText("🎉", canvas.width / 2, 420);
     const link = document.createElement("a");
@@ -913,7 +919,7 @@ export default function RoulettePage() {
                     </button>
                   </div>
                 )}
-
+                
                 {showUpgradeImage1 && upgradeImage1 && (
                   <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                     <img src={upgradeImage1} alt="昇格演出画像1" className="max-w-full max-h-full object-contain" />
@@ -933,6 +939,7 @@ export default function RoulettePage() {
                     <img src={upgradeImage2} alt="昇格演出画像2" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
+
 
                 {winner && !showCutIn && showTicket && winner !== "はずれ" ? (
                   <div className="w-full max-w-md flex flex-col items-center space-y-4">
