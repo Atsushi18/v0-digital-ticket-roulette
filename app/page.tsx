@@ -462,7 +462,7 @@ export default function RoulettePage() {
     ctx.textAlign = "left";
     ctx.fillText("発行者:", 50, 300);
     ctx.textAlign = "right";
-    ctx.fillText("吉田プレゼント", canvas.width - 50, 300);
+    ctx.fillText("原井川　陸　feat.我伊野　司", canvas.width - 50, 300);
     ctx.setLineDash([5, 5]);
     ctx.strokeStyle = "#d1d5db";
     ctx.lineWidth = 2;
@@ -475,7 +475,7 @@ export default function RoulettePage() {
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "center";
     ctx.fillText("※ この券は当選の証明として使用できます", canvas.width / 2, 360);
-    ctx.fillText("※ 追加したい新しい文章をここに書きます", canvas.width / 2, 380);
+    ctx.fillText("※ 原井川陸に食事代金を肩代わりさせることができます", canvas.width / 2, 380);
     ctx.font = "32px Arial";
     ctx.fillText("🎉", canvas.width / 2, 420);
     const link = document.createElement("a");
