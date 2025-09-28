@@ -29,6 +29,11 @@ export default function RoulettePage() {
   const [drumrollAudio, setDrumrollAudio] = useState<string | null>(null);
   const [drumrollDuration, setDrumrollDuration] = useState(6);
   const [cutinAudio, setCutinAudio] = useState<string | null>(null);
+  const [pushButtonAudio, setPushButtonAudio] = useState<string | null>(null);
+  const [upgradeImage1, setUpgradeImage1] = useState<string | null>(null);
+  const [upgradeImage2, setUpgradeImage2] = useState<string | null>(null);
+  const [showUpgradeImage1, setShowUpgradeImage1] = useState(false);
+  const [showUpgradeImage2, setShowUpgradeImage2] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -40,11 +45,15 @@ export default function RoulettePage() {
   const pushButtonFileInputRef = useRef<HTMLInputElement>(null);
   const drumrollFileInputRef = useRef<HTMLInputElement>(null);
   const cutinAudioFileInputRef = useRef<HTMLInputElement>(null);
+  const pushButtonAudioFileInputRef = useRef<HTMLInputElement>(null);
+  const upgradeImage1FileInputRef = useRef<HTMLInputElement>(null);
+  const upgradeImage2FileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef1 = useRef<HTMLAudioElement>(null)
   const audioRef2 = useRef<HTMLAudioElement>(null)
   const drumrollAudioRef = useRef<HTMLAudioElement>(null);
   const cutinAudioRef = useRef<HTMLAudioElement>(null);
+  const pushButtonAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -55,6 +64,9 @@ export default function RoulettePage() {
       const savedPushButtonImage = await localforage.getItem<string>("pushButtonImage")
       const savedDrumroll = await localforage.getItem<string>("drumrollAudio")
       const savedCutinAudio = await localforage.getItem<string>("cutinAudio")
+      const savedPushButtonAudio = await localforage.getItem<string>("pushButtonAudio");
+      const savedUpgradeImage1 = await localforage.getItem<string>("upgradeImage1");
+      const savedUpgradeImage2 = await localforage.getItem<string>("upgradeImage2");
       
       if (savedMedia && savedMediaType) {
         setCutinMedia(savedMedia)
@@ -74,6 +86,15 @@ export default function RoulettePage() {
       }
       if (savedCutinAudio) {
         setCutinAudio(savedCutinAudio)
+      }
+      if (savedPushButtonAudio) {
+        setPushButtonAudio(savedPushButtonAudio);
+      }
+      if (savedUpgradeImage1) {
+        setUpgradeImage1(savedUpgradeImage1);
+      }
+      if (savedUpgradeImage2) {
+        setUpgradeImage2(savedUpgradeImage2);
       }
     }
     loadAssets()
@@ -229,6 +250,54 @@ export default function RoulettePage() {
     reader.readAsDataURL(file);
   }
 
+  const handlePushButtonAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/") && !file.name.endsWith('.mp3') && !file.name.endsWith('.m4a')) {
+      alert("音声ファイルを選択してください。");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      setPushButtonAudio(result);
+      await localforage.setItem("pushButtonAudio", result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const handleUpgradeImage1Upload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルを選択してください。");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      setUpgradeImage1(result);
+      await localforage.setItem("upgradeImage1", result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const handleUpgradeImage2Upload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルを選択してください。");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      setUpgradeImage2(result);
+      await localforage.setItem("upgradeImage2", result);
+    };
+    reader.readAsDataURL(file);
+  }
+
   const removeCutinMedia = async () => {
     setCutinMedia(null);
     setCutinMediaType(null);
@@ -280,19 +349,48 @@ export default function RoulettePage() {
     await localforage.removeItem("cutinAudio");
   }
 
+  const removePushButtonAudio = async () => {
+    setPushButtonAudio(null);
+    if (pushButtonAudioFileInputRef.current) {
+      pushButtonAudioFileInputRef.current.value = "";
+    }
+    await localforage.removeItem("pushButtonAudio");
+  }
+  
+  const removeUpgradeImage1 = async () => {
+    setUpgradeImage1(null);
+    if (upgradeImage1FileInputRef.current) {
+      upgradeImage1FileInputRef.current.value = "";
+    }
+    await localforage.removeItem("upgradeImage1");
+  }
+
+  const removeUpgradeImage2 = async () => {
+    setUpgradeImage2(null);
+    if (upgradeImage2FileInputRef.current) {
+      upgradeImage2FileInputRef.current.value = "";
+    }
+    await localforage.removeItem("upgradeImage2");
+  }
+  
   const spinRoulette = () => {
     if (isSpinning) return;
     
-    if (drumrollAudioRef.current) {
-      drumrollAudioRef.current.load();
-      drumrollAudioRef.current.play().catch(e => console.error("ドラムロールの再生に失敗:", e));
-    }
+    // 全てのメディアをロードして再生準備
+    if (drumrollAudioRef.current) drumrollAudioRef.current.load();
     if (audioRef1.current) audioRef1.current.load();
     if (audioRef2.current) audioRef2.current.load();
     if (cutinAudioRef.current) cutinAudioRef.current.load();
     if (videoRef.current) videoRef.current.load();
+    if (pushButtonAudioRef.current) pushButtonAudioRef.current.load();
+
+    if (drumrollAudioRef.current) {
+      drumrollAudioRef.current.play().catch(e => console.error("ドラムロールの再生に失敗:", e));
+    }
 
     setShowPushButton(false);
+    setShowUpgradeImage1(false);
+    setShowUpgradeImage2(false);
     setWinner(null)
     setShowTicket(false)
     setShowCutIn(false)
@@ -330,37 +428,57 @@ export default function RoulettePage() {
 
     setTimeout(() => {
       setShowPushButton(true);
+      if (pushButtonAudioRef.current && pushButtonAudio) {
+        pushButtonAudioRef.current.play().catch(e => console.error("押せボタン音声の再生に失敗:", e));
+      }
     }, 2000);
   }
 
   const handlePushButtonClick = () => {
     setShowPushButton(false);
+    
+    if (pushButtonAudioRef.current && !pushButtonAudioRef.current.paused) {
+      pushButtonAudioRef.current.pause();
+      pushButtonAudioRef.current.currentTime = 0;
+    }
 
+    playUpgradeAudio1();
+  }
+  
+  const playUpgradeAudio1 = () => {
+    setShowUpgradeImage1(true);
     if (audioRef1.current && upgradeAudio1) {
       audioRef1.current.play().catch(e => {
         console.error("音声1の再生に失敗:", e);
-        playAudio2();
+        handleAudio1End();
       });
     } else {
-      playAudio2();
+      setTimeout(handleAudio1End, 2000); // 音声がない場合は2秒待つ
     }
   }
-  
+
   const handleAudio1End = () => {
-    playAudio2();
+    setShowUpgradeImage1(false);
+    playUpgradeAudio2();
   }
 
-  const playAudio2 = () => {
+  const playUpgradeAudio2 = () => {
     setTimeout(() => {
+      setShowUpgradeImage2(true);
       if (audioRef2.current && upgradeAudio2) {
         audioRef2.current.play().catch(e => {
           console.error("音声2の再生に失敗:", e);
-          triggerCutin();
+          handleAudio2End();
         });
       } else {
-        triggerCutin();
+        setTimeout(handleAudio2End, 2000); // 音声がない場合は2秒待つ
       }
     }, 1000);
+  }
+
+  const handleAudio2End = () => {
+    setShowUpgradeImage2(false);
+    triggerCutin();
   }
 
   const triggerCutin = () => {
@@ -383,21 +501,36 @@ export default function RoulettePage() {
         cutinAudioRef.current.play().catch(e => console.error("カットイン音声の再生に失敗", e));
       }
 
-      if (cutinMediaType === "video" && videoRef.current) {
-        const videoElement = videoRef.current
-        
-        const onVideoEnd = () => handleCutinEnd()
+      const videoElement = videoRef.current;
+      const audioIsPlaying = cutinAudioRef.current && !cutinAudioRef.current.paused;
+
+      const finishHandler = () => {
+        handleCutinEnd();
+      };
+
+      if (cutinMediaType === "video" && videoElement) {
+        const onVideoEnd = () => {
+          if (cutinAudioRef.current && !cutinAudioRef.current.paused) {
+             // 音声が終わるのを待つ
+          } else {
+            finishHandler();
+          }
+        }
         videoElement.addEventListener("ended", onVideoEnd, { once: true })
         
         videoElement.play().catch(error => {
           console.error("動画の自動再生に失敗しました:", error)
-          setTimeout(() => handleCutinEnd(), 2000)
+          setTimeout(() => onVideoEnd(), 2000)
         })
         
         return () => videoElement.removeEventListener("ended", onVideoEnd)
       } else {
-        const timer = setTimeout(() => handleCutinEnd(), 2000)
-        return () => clearTimeout(timer)
+        if (audioIsPlaying && cutinAudioRef.current) {
+           // onendedイベントがaudioタグにセットされているので待つ
+        } else {
+          const timer = setTimeout(() => finishHandler(), 2000)
+          return () => clearTimeout(timer);
+        }
       }
     }
   }, [showCutIn, cutinMediaType])
@@ -492,6 +625,8 @@ export default function RoulettePage() {
     setIsSpinning(false)
     setWinnerIndex(null)
     setShowPushButton(false);
+    setShowUpgradeImage1(false);
+    setShowUpgradeImage2(false);
     if (drumrollAudioRef.current) {
       drumrollAudioRef.current.pause();
       drumrollAudioRef.current.currentTime = 0;
@@ -501,9 +636,10 @@ export default function RoulettePage() {
   return (
     <div className="min-h-screen bg-background">
       <audio ref={drumrollAudioRef} src={drumrollAudio || ""} />
+      <audio ref={pushButtonAudioRef} src={pushButtonAudio || ""} />
       <audio ref={audioRef1} src={upgradeAudio1 || ""} onEnded={handleAudio1End} />
-      <audio ref={audioRef2} src={upgradeAudio2 || ""} onEnded={triggerCutin} />
-      <audio ref={cutinAudioRef} src={cutinAudio || ""} />
+      <audio ref={audioRef2} src={upgradeAudio2 || ""} onEnded={handleAudio2End} />
+      <audio ref={cutinAudioRef} src={cutinAudio || ""} onEnded={handleCutinEnd}/>
       
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -630,20 +766,13 @@ export default function RoulettePage() {
                   </div>
                 )}
               </div>
-              <h3 className="text-lg font-semibold my-4 pt-4 border-t">昇格演出の音声設定</h3>
+              <h3 className="text-lg font-semibold my-4 pt-4 border-t">昇格演出の音声・画像設定</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">音声1 (先に再生)</label>
-                  <input
-                    ref={audioFileInputRef1}
-                    type="file"
-                    accept="audio/*,.mp3,.m4a"
-                    onChange={handleAudioUpload1}
-                    className="hidden"
-                  />
+                  <label className="text-sm font-medium">音声1</label>
+                  <input ref={audioFileInputRef1} type="file" accept="audio/*,.mp3,.m4a" onChange={handleAudioUpload1} className="hidden" />
                   <Button onClick={() => audioFileInputRef1.current?.click()} variant="outline" className="w-full mt-2">
-                    <Upload className="w-4 h-4 mr-2" />
-                    音声ファイル1をアップロード
+                    <Upload className="w-4 h-4 mr-2" /> 音声ファイル1をアップロード
                   </Button>
                 </div>
                 {upgradeAudio1 && (
@@ -664,17 +793,34 @@ export default function RoulettePage() {
               </div>
               <div className="space-y-4 mt-4">
                 <div>
-                  <label className="text-sm font-medium">音声2 (音声1の終了後1秒で再生)</label>
-                  <input
-                    ref={audioFileInputRef2}
-                    type="file"
-                    accept="audio/*,.mp3,.m4a"
-                    onChange={handleAudioUpload2}
-                    className="hidden"
-                  />
+                  <label className="text-sm font-medium">音声1の画像</label>
+                  <input ref={upgradeImage1FileInputRef} type="file" accept="image/*" onChange={handleUpgradeImage1Upload} className="hidden" />
+                  <Button onClick={() => upgradeImage1FileInputRef.current?.click()} variant="outline" className="w-full mt-2">
+                    <Upload className="w-4 h-4 mr-2" /> 画像ファイル1をアップロード
+                  </Button>
+                </div>
+                {upgradeImage1 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 画像あり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={removeUpgradeImage1}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <img src={upgradeImage1} alt="昇格演出画像1プレビュー" className="max-w-full h-32 object-contain mx-auto" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="text-sm font-medium">音声2</label>
+                  <input ref={audioFileInputRef2} type="file" accept="audio/*,.mp3,.m4a" onChange={handleAudioUpload2} className="hidden" />
                   <Button onClick={() => audioFileInputRef2.current?.click()} variant="outline" className="w-full mt-2">
-                    <Upload className="w-4 h-4 mr-2" />
-                    音声ファイル2をアップロード
+                    <Upload className="w-4 h-4 mr-2" /> 音声ファイル2をアップロード
                   </Button>
                 </div>
                 {upgradeAudio2 && (
@@ -689,6 +835,30 @@ export default function RoulettePage() {
                     </div>
                     <div className="border rounded-lg p-4 bg-muted">
                       <audio src={upgradeAudio2} controls className="w-full" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="text-sm font-medium">音声2の画像</label>
+                  <input ref={upgradeImage2FileInputRef} type="file" accept="image/*" onChange={handleUpgradeImage2Upload} className="hidden" />
+                  <Button onClick={() => upgradeImage2FileInputRef.current?.click()} variant="outline" className="w-full mt-2">
+                    <Upload className="w-4 h-4 mr-2" /> 画像ファイル2をアップロード
+                  </Button>
+                </div>
+                {upgradeImage2 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 画像あり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={removeUpgradeImage2}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <img src={upgradeImage2} alt="昇格演出画像2プレビュー" className="max-w-full h-32 object-contain mx-auto" />
                     </div>
                   </div>
                 )}
@@ -724,9 +894,10 @@ export default function RoulettePage() {
                   </div>
                 )}
               </div>
-              <h3 className="text-lg font-semibold my-4 pt-4 border-t">「押せ！」ボタンの画像設定</h3>
+              <h3 className="text-lg font-semibold my-4 pt-4 border-t">「押せ！」ボタンの画像・音声設定</h3>
               <div className="space-y-4">
                 <div>
+                  <label className="text-sm font-medium">ボタンの画像</label>
                   <input
                     ref={pushButtonFileInputRef}
                     type="file"
@@ -734,7 +905,7 @@ export default function RoulettePage() {
                     onChange={handlePushButtonImageUpload}
                     className="hidden"
                   />
-                  <Button onClick={() => pushButtonFileInputRef.current?.click()} variant="outline" className="w-full">
+                  <Button onClick={() => pushButtonFileInputRef.current?.click()} variant="outline" className="w-full mt-2">
                     <Upload className="w-4 h-4 mr-2" />
                     ボタンの画像をアップロード
                   </Button>
@@ -751,6 +922,37 @@ export default function RoulettePage() {
                     </div>
                     <div className="border rounded-lg p-4 bg-muted">
                       <img src={pushButtonImage} alt="ボタン画像プレビュー" className="max-w-full h-32 object-contain mx-auto" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="text-sm font-medium">ボタン表示時の音声</label>
+                  <input
+                    ref={pushButtonAudioFileInputRef}
+                    type="file"
+                    accept="audio/*,.mp3,.m4a"
+                    onChange={handlePushButtonAudioUpload}
+                    className="hidden"
+                  />
+                  <Button onClick={() => pushButtonAudioFileInputRef.current?.click()} variant="outline" className="w-full mt-2">
+                    <Upload className="w-4 h-4 mr-2" />
+                    ボタンの音声をアップロード
+                  </Button>
+                </div>
+                {pushButtonAudio && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 音声ファイルあり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={removePushButtonAudio}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <audio src={pushButtonAudio} controls className="w-full" />
                     </div>
                   </div>
                 )}
@@ -801,6 +1003,17 @@ export default function RoulettePage() {
                     >
                       {!pushButtonImage && "押せ！"}
                     </button>
+                  </div>
+                )}
+
+                {showUpgradeImage1 && upgradeImage1 && (
+                  <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                    <img src={upgradeImage1} alt="昇格演出画像1" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
+                {showUpgradeImage2 && upgradeImage2 && (
+                  <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                    <img src={upgradeImage2} alt="昇格演出画像2" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
 
