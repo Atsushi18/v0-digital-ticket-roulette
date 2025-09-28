@@ -28,6 +28,7 @@ export default function RoulettePage() {
   const [showPushButton, setShowPushButton] = useState(false);
   const [drumrollAudio, setDrumrollAudio] = useState<string | null>(null);
   const [drumrollDuration, setDrumrollDuration] = useState(6);
+  const [cutinAudio, setCutinAudio] = useState<string | null>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -38,10 +39,12 @@ export default function RoulettePage() {
   const audioFileInputRef2 = useRef<HTMLInputElement>(null)
   const pushButtonFileInputRef = useRef<HTMLInputElement>(null);
   const drumrollFileInputRef = useRef<HTMLInputElement>(null);
+  const cutinAudioFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef1 = useRef<HTMLAudioElement>(null)
   const audioRef2 = useRef<HTMLAudioElement>(null)
   const drumrollAudioRef = useRef<HTMLAudioElement>(null);
+  const cutinAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -51,6 +54,7 @@ export default function RoulettePage() {
       const savedAudio2 = await localforage.getItem<string>("upgradeAudio2")
       const savedPushButtonImage = await localforage.getItem<string>("pushButtonImage")
       const savedDrumroll = await localforage.getItem<string>("drumrollAudio")
+      const savedCutinAudio = await localforage.getItem<string>("cutinAudio")
       
       if (savedMedia && savedMediaType) {
         setCutinMedia(savedMedia)
@@ -67,6 +71,9 @@ export default function RoulettePage() {
       }
       if (savedDrumroll) {
         setDrumrollAudio(savedDrumroll)
+      }
+      if (savedCutinAudio) {
+        setCutinAudio(savedCutinAudio)
       }
     }
     loadAssets()
@@ -205,6 +212,22 @@ export default function RoulettePage() {
     };
     reader.readAsDataURL(file);
   }
+  
+  const handleCutinAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/") && !file.name.endsWith('.mp3') && !file.name.endsWith('.m4a')) {
+      alert("音声ファイルを選択してください。");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      setCutinAudio(result);
+      await localforage.setItem("cutinAudio", result);
+    };
+    reader.readAsDataURL(file);
+  }
 
   const removeCutinMedia = async () => {
     setCutinMedia(null);
@@ -249,6 +272,14 @@ export default function RoulettePage() {
     await localforage.removeItem("drumrollAudio");
   }
   
+  const removeCutinAudio = async () => {
+    setCutinAudio(null);
+    if (cutinAudioFileInputRef.current) {
+      cutinAudioFileInputRef.current.value = "";
+    }
+    await localforage.removeItem("cutinAudio");
+  }
+
   const spinRoulette = () => {
     if (isSpinning) return;
     
@@ -258,6 +289,8 @@ export default function RoulettePage() {
     }
     if (audioRef1.current) audioRef1.current.load();
     if (audioRef2.current) audioRef2.current.load();
+    if (cutinAudioRef.current) cutinAudioRef.current.load();
+    if (videoRef.current) videoRef.current.load();
 
     setShowPushButton(false);
     setWinner(null)
@@ -336,12 +369,20 @@ export default function RoulettePage() {
 
   const handleCutinEnd = () => {
     setShowCutIn(false)
+    if (cutinAudioRef.current) {
+      cutinAudioRef.current.pause();
+      cutinAudioRef.current.currentTime = 0;
+    }
     setWinner("食い逃げ券");
     setShowTicket(true);
   }
 
   useEffect(() => {
     if (showCutIn) {
+      if (cutinAudioRef.current) {
+        cutinAudioRef.current.play().catch(e => console.error("カットイン音声の再生に失敗", e));
+      }
+
       if (cutinMediaType === "video" && videoRef.current) {
         const videoElement = videoRef.current
         
@@ -462,6 +503,7 @@ export default function RoulettePage() {
       <audio ref={drumrollAudioRef} src={drumrollAudio || ""} />
       <audio ref={audioRef1} src={upgradeAudio1 || ""} onEnded={handleAudio1End} />
       <audio ref={audioRef2} src={upgradeAudio2 || ""} onEnded={triggerCutin} />
+      <audio ref={cutinAudioRef} src={cutinAudio || ""} />
       
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -647,6 +689,37 @@ export default function RoulettePage() {
                     </div>
                     <div className="border rounded-lg p-4 bg-muted">
                       <audio src={upgradeAudio2} controls className="w-full" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <h3 className="text-lg font-semibold my-4 pt-4 border-t">カットイン再生時の音声設定</h3>
+              <div className="space-y-4">
+                <div>
+                  <input
+                    ref={cutinAudioFileInputRef}
+                    type="file"
+                    accept="audio/*,.mp3,.m4a"
+                    onChange={handleCutinAudioUpload}
+                    className="hidden"
+                  />
+                  <Button onClick={() => cutinAudioFileInputRef.current?.click()} variant="outline" className="w-full">
+                    <Upload className="w-4 h-4 mr-2" />
+                    カットイン用音声をアップロード
+                  </Button>
+                </div>
+                {cutinAudio && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 音声ファイルあり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={removeCutinAudio}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <audio src={cutinAudio} controls className="w-full" />
                     </div>
                   </div>
                 )}
