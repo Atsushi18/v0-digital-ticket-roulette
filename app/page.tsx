@@ -24,6 +24,8 @@ export default function RoulettePage() {
   const [cutinMediaType, setCutinMediaType] = useState<"image" | "video" | null>(null)
   const [upgradeAudio1, setUpgradeAudio1] = useState<string | null>(null)
   const [upgradeAudio2, setUpgradeAudio2] = useState<string | null>(null)
+  const [pushButtonImage, setPushButtonImage] = useState<string | null>(null);
+  const [showPushButton, setShowPushButton] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -32,6 +34,7 @@ export default function RoulettePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const audioFileInputRef1 = useRef<HTMLInputElement>(null)
   const audioFileInputRef2 = useRef<HTMLInputElement>(null)
+  const pushButtonFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef1 = useRef<HTMLAudioElement>(null)
   const audioRef2 = useRef<HTMLAudioElement>(null)
@@ -42,6 +45,7 @@ export default function RoulettePage() {
       const savedMediaType = (await localforage.getItem<"image" | "video" | null>("cutinMediaType"))
       const savedAudio1 = await localforage.getItem<string>("upgradeAudio1")
       const savedAudio2 = await localforage.getItem<string>("upgradeAudio2")
+      const savedPushButtonImage = await localforage.getItem<string>("pushButtonImage")
       
       if (savedMedia && savedMediaType) {
         setCutinMedia(savedMedia)
@@ -52,6 +56,9 @@ export default function RoulettePage() {
       }
       if (savedAudio2) {
         setUpgradeAudio2(savedAudio2)
+      }
+      if (savedPushButtonImage) {
+        setPushButtonImage(savedPushButtonImage);
       }
     }
     loadAssets()
@@ -140,6 +147,22 @@ export default function RoulettePage() {
     };
     reader.readAsDataURL(file);
   }
+  
+  const handlePushButtonImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルを選択してください。");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      setPushButtonImage(result);
+      await localforage.setItem("pushButtonImage", result);
+    };
+    reader.readAsDataURL(file);
+  }
 
   const removeCutinMedia = async () => {
     setCutinMedia(null);
@@ -166,10 +189,19 @@ export default function RoulettePage() {
     }
     await localforage.removeItem("upgradeAudio2");
   }
+
+  const removePushButtonImage = async () => {
+    setPushButtonImage(null);
+    if (pushButtonFileInputRef.current) {
+      pushButtonFileInputRef.current.value = "";
+    }
+    await localforage.removeItem("pushButtonImage");
+  }
   
   const spinRoulette = () => {
     if (isSpinning) return
 
+    setShowPushButton(false);
     setWinner(null)
     setShowTicket(false)
     setShowCutIn(false)
@@ -201,15 +233,21 @@ export default function RoulettePage() {
     setIsSpinning(false)
 
     setTimeout(() => {
-      if (audioRef1.current && upgradeAudio1) {
-        audioRef1.current.play().catch(e => {
-          console.error("音声1の再生に失敗:", e);
-          triggerCutin();
-        });
-      } else {
-        triggerCutin();
-      }
+      setShowPushButton(true);
     }, 2000);
+  }
+
+  const handlePushButtonClick = () => {
+    setShowPushButton(false);
+
+    if (audioRef1.current && upgradeAudio1) {
+      audioRef1.current.play().catch(e => {
+        console.error("音声1の再生に失敗:", e);
+        playAudio2();
+      });
+    } else {
+      playAudio2();
+    }
   }
   
   const playAudio2 = () => {
@@ -345,6 +383,7 @@ export default function RoulettePage() {
     setInitialResult(null)
     setIsSpinning(false)
     setWinnerIndex(null)
+    setShowPushButton(false);
   }
 
   return (
@@ -509,6 +548,38 @@ export default function RoulettePage() {
                   </div>
                 )}
               </div>
+              <h3 className="text-lg font-semibold my-4 pt-4 border-t">「押せ！」ボタンの画像設定</h3>
+              <div className="space-y-4">
+                <div>
+                  <input
+                    ref={pushButtonFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePushButtonImageUpload}
+                    className="hidden"
+                  />
+                  <Button onClick={() => pushButtonFileInputRef.current?.click()} variant="outline" className="w-full">
+                    <Upload className="w-4 h-4 mr-2" />
+                    ボタンの画像をアップロード
+                  </Button>
+                </div>
+                {pushButtonImage && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        現在の設定: 画像あり
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={removePushButtonImage}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted">
+                      <img src={pushButtonImage} alt="ボタン画像プレビュー" className="max-w-full h-32 object-contain mx-auto" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </CardContent>
           </Card>
         )}
@@ -543,6 +614,18 @@ export default function RoulettePage() {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {showPushButton && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+                    <button 
+                      onClick={handlePushButtonClick}
+                      className="w-64 h-64 rounded-full bg-red-600 text-white text-6xl font-bold shadow-2xl border-8 border-white animate-pulse focus:outline-none focus:ring-4 focus:ring-red-400"
+                      style={pushButtonImage ? { backgroundImage: `url(${pushButtonImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+                    >
+                      {!pushButtonImage && "押せ！"}
+                    </button>
                   </div>
                 )}
 
